@@ -1,0 +1,9 @@
+{
+  "config": {
+    "arquetipo": "Preocupado",
+    "comportamiento": "- Cuestiona las respuestas\n- Contrasta con documentos\n- Desconfía de respuestas \"demasiado redondas\"\n- Usa la IA con cautela",
+    "necesidades": "- Trazabilidad a fuente\n- Explicación del razonamiento\n- Mensajes claros de límites\n- Refuerzo del uso responsable",
+    "barreras": "- Miedo a alucinaciones\n- Falta de transparencia\n- Respuestas sin fuente\n- Errores puntuales que rompen la confianza"
+  },
+  "timestamp": "2026-01-28T11:58:50.767437"
+}

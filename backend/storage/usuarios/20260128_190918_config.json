@@ -1,0 +1,9 @@
+{
+  "config": {
+    "arquetipo": "Explorador",
+    "comportamiento": "- Prueba distintos enfoques\n- Hace preguntas abiertas\n- Juega con la herramienta\n- Aporta ideas y mejoras",
+    "necesidades": "- Conversación fluida\n- Libertad para experimentar\n- Capacidad de iterar\n- Feedback rápido",
+    "barreras": "- Respuestas rígidas\n- Demasiadas restricciones\n- Falta de evolución del producto"
+  },
+  "timestamp": "2026-01-28T19:09:18.939909"
+}

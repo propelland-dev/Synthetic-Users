@@ -1,0 +1,82 @@
+{
+  "timestamp": "2026-02-03T13:01:28.348967",
+  "respondent_id": "20260203_130128_respondent_01.json",
+  "perfil_basico": {
+    "arquetipo": "Preocupado",
+    "comportamiento": "- Cuestiona las respuestas\n- Contrasta con documentos\n- Desconfía de respuestas \"demasiado redondas\"\n- Usa la IA con cautela",
+    "necesidades": "- Trazabilidad a fuente\n- Explicación del razonamiento\n- Mensajes claros de límites\n- Refuerzo del uso responsable",
+    "barreras": "- Miedo a alucinaciones\n- Falta de transparencia\n- Respuestas sin fuente\n- Errores puntuales que rompen la confianza"
+  },
+  "usuario_nombre": "Preocupado",
+  "perfil_generado": "**Perfil detallado de usuario sintético: \"Eva Morales\"**\n\n**Nombre ficticio:** Eva Morales\n\n**Personalidad y rasgos psicológicos:**\nEva es una persona analítica y crítica, con un fuerte sentido de responsabilidad y ética. Es una persona que valora la precisión y la transparencia en todas las áreas de su vida. Su arquetipo de \"Preocupado\" la lleva a cuestionar constantemente las respuestas y buscar evidencia sólida para apoyar cualquier afirmación.\n\n**Motivaciones y frustraciones:**\nEva está motivada por la necesidad de obtener información precisa y confiable, especialmente en temas complejos o técnicos. Sin embargo, su tendencia a cuestionar constantemente las respuestas puede llevarla a sentirse frustrada cuando no encuentra la evidencia que busca. También se siente incómoda con la falta de transparencia o la posibilidad de errores puntuales.\n\n**Estilo de comunicación:**\nEva prefiere un lenguaje claro y conciso, sin ambigüedades ni rodeos. Busca mensajes que sean específicos, explicativos y contengan información relevante sobre la fuente del conocimiento. También valora la oportunidad de establecer límites claros y recibir retroalimentación constructiva.\n\n**Cómo toma decisiones y valida información:**\nEva toma decisiones basadas en evidencia sólida y análisis crítico. Busca respuestas que sean verificables, fiables y transparentes. Valora la importancia de trazabilidad a fuente y explicación del razonamiento detrás de cualquier afirmación.\n\n**Qué le haría confiar o desconfiar del asistente:**\nEva se confiará en el asistente si:\n\n* Recibe respuestas claras, específicas y verificables.\n* El asistente proporciona explicación detallada del razonamiento detrás de cualquier afirmación.\n* Hay trazabilidad clara a la fuente del conocimiento.\n* El asistente establece límites claros y se disculpa por errores puntuales.\n\nPor otro lado, Eva se desconfiará del asistente si:\n\n* Las respuestas son ambiguas o generales sin fundamento claro.\n* No hay explicación detallada del razonamiento detrás de cualquier afirmación.\n* La trazabilidad a fuente es inexistente o no clara.\n* El asistente proporciona respuestas sin bases sólidas o erróneas.\n\n**Barreras típicas de adopción:**\nEva podría tener dificultades para adoptar el uso del asistente si:\n\n* Se siente incómoda con la posibilidad de alucinaciones o información falsa.\n* No se siente segura de la transparencia del asistente o su capacidad para proporcionar respuestas precisas.\n\nEn resumen, Eva es una persona analítica y crítica que busca información precisa y confiable. El asistente debe ser capaz de proporcionar respuestas claras, específicas y verificables, con explicación detallada del razonamiento detrás de cualquier afirmación. La trazabilidad a fuente y la transparencia son fundamentales para generar su confianza.",
+  "steps": [
+    {
+      "type": "survey",
+      "questions": [
+        "¿Cómo valorarías la sesión de presentación de IngenIA?",
+        "¿Cuál fue tu primera impresión general de IngenIA?",
+        "¿Qué parte de IngenIA te pareció más útil o interesante tras conocerla?",
+        "¿En qué tareas concretas crees que IngenIA podría ayudarte en tu trabajo?",
+        "¿Con qué frecuencia crees que necesitarías consultar especificaciones o estándares técnicos en tu día a día?Tras esta primera toma de contacto, ¿te sientes preparado/a para empezar a usar IngenIA?",
+        "¿Qué necesitarías para sentirte completamente preparado/a para usarla con confianza?",
+        "¿Qué probabilidad hay de que recomiendes IngenIA a un compañero o compañera?",
+        "¿Quieres añadir algún comentario, sugerencia o expectativa adicional sobre IngenIA?"
+      ],
+      "text": "Q1: ¿Cómo valorarías la sesión de presentación de IngenIA?\n\nA1: Me pareció muy bien presentada y bien explicada. Me gustó que se mostrara cómo funciona y cómo puede ayudarme en mi trabajo diario.\n\nQ2: ¿Cuál fue tu primera impresión general de IngenIA?\n\nA2: Mi primera impresión fue que es una herramienta muy útil y potente para acceder a información operativa y de seguridad de manera rápida y unificada.\n\nQ3: ¿Qué parte de IngenIA te pareció más útil o interesante tras conocerla?\n\nA3: Me gustó la sección de estándares técnicos, ya que me parece muy importante tener acceso a esa información en tiempo real. También me pareció interesante la posibilidad de acceder a documentación y especificaciones de seguridad.\n\nQ4: ¿En qué tareas concretas crees que IngenIA podría ayudarte en tu trabajo?\n\nA4: Creo que podría ayudarme mucho en la búsqueda de información sobre estándares técnicos y especificaciones de seguridad. También me gustaría poder acceder a documentación y información operativa de manera rápida y unificada.\n\nQ5: ¿Con qué frecuencia crees que necesitarías consultar especificaciones o estándares técnicos en tu día a día?\n\nA5: Creo que necesitaría consultarlas al menos dos veces a la semana, ya que mi trabajo requiere estar actualizado sobre las últimas normas y regulaciones.\n\nQ6: Tras esta primera toma de contacto, ¿te sientes preparado/a para empezar a usar IngenIA?\n\nA6: Sí, me siento bastante preparado. Me parece una herramienta muy útil y fácil de usar. Solo necesitaría un poco de práctica para sentirme completamente cómodo con ella.\n\nQ7: ¿Qué necesitarías para sentirte completamente preparado/a para usarla con confianza?\n\nA7: Creo que necesitaría acceso a la documentación y especificaciones técnicas más completas, así como una guía de uso más detallada. También me gustaría poder acceder a soporte técnico en caso de alguna pregunta o duda.\n\nQ8: ¿Qué probabilidad hay de que recomiendes IngenIA a un compañero o compañera?\n\nA8: Creo que sí, si puedo ver una mejora significativa en mi eficiencia y productividad. Me parece una herramienta muy útil para cualquier persona que requiera acceso a información operativa y de seguridad.\n\nQ9: ¿Quieres añadir algún comentario, sugerencia o expectativa adicional sobre IngenIA?\n\nA9: Sí, me gustaría sugerir que se incluya más ejemplos prácticos y casos de uso en la documentación para que sea más fácil entender cómo funciona la herramienta. También me gustaría ver una opción para guardar favoritos o bookmarks de información importante."
+    },
+    {
+      "type": "behavior_sim",
+      "sims": [
+        {
+          "scenario": "",
+          "output": {
+            "steps": [
+              {
+                "step": "Exploro el producto IngenIA",
+                "acción": "Visito la página de inicio del sitio web de IngenIA"
+              },
+              {
+                "step": "Busco información sobre funcionalidades",
+                "acción": "Accedo al menú de funciones y selecciono una categoría de interés"
+              },
+              {
+                "step": "Verifico la compatibilidad con mis dispositivos",
+                "acción": "Compruebo que mi dispositivo móvil o computadora estén conectados a Internet y sean compatibles con IngenIA"
+              }
+            ],
+            "fricciones": [
+              {
+                "friCTION": "Falta de claridad en la presentación",
+                "explicacion": "En algunos pasos, no entendí completamente cómo funciona o por qué una función específica es útil."
+              },
+              {
+                "friCTION": "Dificultad para encontrar información relevante",
+                "explicacion": "Algunas secciones del sitio web requerían más tiempo y esfuerzo que otros para encontrar la información que busco."
+              }
+            ],
+            "needs": [
+              {
+                "NEED": "Explicación adicional sobre las funcionalidades de IngenIA",
+                "explicacion": "Me gustaría entender mejor cómo funcionan algunas de las características y cómo pueden ayudarme en mi trabajo diario."
+              },
+              {
+                "NEED": "Información sobre la compatibilidad con dispositivos",
+                "explicacion": "Quisiera saber más sobre los requisitos de hardware y software para asegurarme de que IngenIA funcione correctamente en mi dispositivo."
+              }
+            ],
+            "suggestions": [
+              {
+                "SUGGESTION": "Crea un menú de ayuda con información básica",
+                "explicacion": "Me gustaría tener acceso a una sección del sitio web con información básica sobre cómo usar IngenIA, incluyendo tutoriales y consejos para principiantes."
+              },
+              {
+                "SUGGESTION": "Ofrece un componente de soporte técnico",
+                "explicacion": "Sería útil tener la opción de contactar a un experto en caso de problemas o dudas sobre el uso de IngenIA."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

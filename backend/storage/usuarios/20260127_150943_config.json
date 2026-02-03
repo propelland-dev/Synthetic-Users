@@ -1,0 +1,15 @@
+{
+  "config": {
+    "edad": 30,
+    "genero": "Masculino",
+    "ubicacion": "España",
+    "experiencia_tecnologica": "Intermedio",
+    "intereses": [
+      "Tecnologia",
+      "estar con sus hijos",
+      "comida saludable",
+      "yoga"
+    ]
+  },
+  "timestamp": "2026-01-27T15:09:43.043118"
+}

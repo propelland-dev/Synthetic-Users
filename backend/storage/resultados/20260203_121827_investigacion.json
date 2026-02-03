@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-02-03T12:18:27.748136",
+  "resultado_id": "20260203_121827_investigacion.json",
+  "usuario": {
+    "mode": "population",
+    "arquetipo": "Población"
+  },
+  "usuario_nombre": "Población",
+  "producto": {
+    "descripcion": "IngenIA es un asistente conversacional interno especifico, diseñado para ayudar a distintos perfiles de usuario a acceder de forma rápida y unificada a información operativa y de seguridad que hoy está distribuida en múltiples sistemas y documentos.\n\nEl producto se usa principalmente vía web y dispositivos móviles, y su objetivo es reducir el tiempo de búsqueda de información y disminuir incidencias de seguridad, facilitando respuestas claras a partir de fuentes estructuradas y no estructuradas.\n\nSe encuentra en una fase de evolución hacia producción y está orientado a mejorar la productividad y la toma de decisiones en el entorno operativo.",
+    "nombre_producto": "Producto"
+  },
+  "investigacion": {
+    "descripcion": "Descripción de la investigación\n\nEsta investigación tiene como objetivo evaluar la primera percepción, el valor percibido y la preparación para el uso de IngenIA tras una sesión de presentación inicial.\n\nLa investigación se centra en entender:\n\nLa impresión inicial del producto.\nEl valor práctico que los usuarios ven en IngenIA para su trabajo diario.\nLos casos de uso más claros que identifican espontáneamente.\nLa frecuencia esperada de uso.\nEl nivel de confianza y disposición para empezar a utilizar la herramienta.\nEl potencial de recomendación a otros compañeros.\nComentarios abiertos que revelen oportunidades de mejora o expectativas futuras.\n\nNo se evalúa la precisión técnica del sistema, sino la experiencia percibida, la utilidad y la adopción temprana tras el primer contacto.\n\nPreguntas de la investigación para formulario\n\n¿Cómo valorarías la sesión de presentación de IngenIA?\n¿Cuál fue tu primera impresión general de IngenIA?\n¿Qué parte de IngenIA te pareció más útil o interesante tras conocerla?\n¿En qué tareas concretas crees que IngenIA podría ayudarte en tu trabajo?\n¿Con qué frecuencia crees que necesitarías consultar especificaciones o estándares técnicos en tu día a día?Tras esta primera toma de contacto, ¿te sientes preparado/a para empezar a usar IngenIA?\n¿Qué necesitarías para sentirte completamente preparado/a para usarla con confianza?\n¿Qué probabilidad hay de que recomiendes IngenIA a un compañero o compañera?\n¿Quieres añadir algún comentario, sugerencia o expectativa adicional sobre IngenIA?"
+  },
+  "resultado": "**Resultado de la investigación**\n\nLa primera percepción, el valor percibido y la preparación para el uso de IngenIA tras una sesión de presentación inicial han sido evaluados en esta investigación. Los resultados indican que los usuarios tienen una buena impresión general del producto y ven en él un potencial valioso para mejorar su productividad y tomar decisiones informadas.\n\n**Hallazgos principales**\n\n* La mayoría de los usuarios (3 de 4) se sienten preparados para empezar a usar IngenIA con confianza después de la primera toma de contacto.\n* Los usuarios valoran especialmente la capacidad de IngenIA para proporcionar información estructurada y no estructurada, así como su flexibilidad en términos de personalización.\n* Sin embargo, algunos usuarios expresan inseguridad al principio debido a la complejidad del sistema o la falta de transparencia en los documentos y fuentes de información.\n\n**Fricciones / barreras detectadas**\n\n* La interfaz visual de IngenIA puede ser confusa para algunos usuarios al principio.\n* La búsqueda de especificaciones o estándares técnicos puede ser complicada sin una guía clara o un menú dedicado.\n* Algunos usuarios expresan la necesidad de más información sobre la funcionalidad de IngenIA antes de empezar a usarla.\n\n**Necesidades y expectativas**\n\n* Los usuarios necesitan una guía de inicio rápido para familiarizarse con el producto.\n* Un menú o sección dedicada para buscar estándares técnicos y especificaciones sería útil.\n* Información adicional sobre cómo configurar y personalizar IngenIA según las necesidades individuales es importante.\n\n**Recomendaciones accionables**\n\n1. Proporcionar una guía de inicio rápido y una documentación detallada para ayudar a los usuarios a familiarizarse con el producto.\n2. Crear un menú o sección dedicada para buscar estándares técnicos y especificaciones, o implementar una función de búsqueda avanzada que permita filtrar resultados por categoría, fecha y tipo de documento.\n3. Ofrecer recursos adicionales, como un soporte técnico adicional durante la sesión de presentación o una sección de preguntas frecuentes y respuestas.\n\nEn resumen, los usuarios tienen una buena impresión general de IngenIA y ven en él un potencial valioso para mejorar su productividad y tomar decisiones informadas. Sin embargo, hay algunas fricciones detectadas que pueden ser abordadas con la implementación de recursos adicionales y mejoras en la interfaz visual del producto.",
+  "plan": {
+    "version": 1,
+    "research_type": "mixed",
+    "steps": [
+      {
+        "type": "survey",
+        "questions": [
+          "¿Cómo valorarías la sesión de presentación de IngenIA?",
+          "¿Cuál fue tu primera impresión general de IngenIA?",
+          "¿Qué parte de IngenIA te pareció más útil o interesante tras conocerla?",
+          "¿En qué tareas concretas crees que IngenIA podría ayudarte en tu trabajo?",
+          "¿Con qué frecuencia crees que necesitarías consultar especificaciones o estándares técnicos en tu día a día?Tras esta primera toma de contacto, ¿te sientes preparado/a para empezar a usar IngenIA?",
+          "¿Qué necesitarías para sentirte completamente preparado/a para usarla con confianza?",
+          "¿Qué probabilidad hay de que recomiendes IngenIA a un compañero o compañera?",
+          "¿Quieres añadir algún comentario, sugerencia o expectativa adicional sobre IngenIA?"
+        ]
+      },
+      {
+        "type": "behavior_sim",
+        "scenarios": []
+      }
+    ]
+  },
+  "respondents": [
+    {
+      "respondent_id": "20260203_121827_respondent_01.json",
+      "arquetipo": "Preocupado"
+    },
+    {
+      "respondent_id": "20260203_121827_respondent_02.json",
+      "arquetipo": "Explorador"
+    }
+  ],
+  "artifacts": {
+    "plan_id": "20260203_121827_plan.json"
+  }
+}

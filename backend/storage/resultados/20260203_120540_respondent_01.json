@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-02-03T12:05:40.093083",
+  "respondent_id": "20260203_120540_respondent_01.json",
+  "perfil_basico": {
+    "arquetipo": "X",
+    "comportamiento": "",
+    "necesidades": "",
+    "barreras": ""
+  },
+  "usuario_nombre": "X",
+  "perfil_generado": "OK",
+  "steps": [
+    {
+      "type": "survey",
+      "questions": [
+        "Queremos una entrevista sobre el producto. ¿Qué te gusta? ¿Qué no?"
+      ],
+      "text": "OK"
+    },
+    {
+      "type": "interview",
+      "n_questions": 6,
+      "text": "OK"
+    }
+  ]
+}

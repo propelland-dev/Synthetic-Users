@@ -1,0 +1,38 @@
+[
+  {
+    "nombre": "Preocupado",
+    "comportamiento": "- Cuestiona las respuestas\n- Contrasta con documentos\n- Desconfía de respuestas \"demasiado redondas\"\n- Usa la IA con cautela",
+    "necesidades": "- Trazabilidad a fuente\n- Explicación del razonamiento\n- Mensajes claros de límites\n- Refuerzo del uso responsable",
+    "barreras": "- Miedo a alucinaciones\n- Falta de transparencia\n- Respuestas sin fuente\n- Errores puntuales que rompen la confianza"
+  },
+  {
+    "nombre": "Explorador",
+    "comportamiento": "- Prueba distintos enfoques\n- Hace preguntas abiertas\n- Juega con la herramienta\n- Aporta ideas y mejoras",
+    "necesidades": "- Conversación fluida\n- Libertad para experimentar\n- Capacidad de iterar\n- Feedback rápido",
+    "barreras": "- Respuestas rígidas\n- Demasiadas restricciones\n- Falta de evolución del producto"
+  },
+  {
+    "nombre": "Ejecutor",
+    "comportamiento": "- Quiere respuestas rápidas\n- Uso pragmático y directo\n- Poco interés en el \"cómo\"\n- Busca aplicabilidad inmediata",
+    "necesidades": "- Respuestas claras y accionables\n- Pasos concretos\n- Síntesis\n- Rapidez",
+    "barreras": "- Respuestas ambiguas\n- Exceso de explicación\n- Lenguaje poco operativo"
+  },
+  {
+    "nombre": "Escéptico Silencioso",
+    "comportamiento": "- Prueba una o dos veces\n- Abandona sin avisar\n- No da feedback\n- Observa desde la distancia",
+    "necesidades": "- Casos reales\n- Evidencias claras de valor\n- Confianza progresiva\n- Referentes visibles",
+    "barreras": "- Primera mala experiencia\n- Falta de claridad en el valor\n- Sensación de \"esto no es para mí\""
+  },
+  {
+    "nombre": "Dependiente",
+    "comportamiento": "- Uso muy intensivo\n- Delegación excesiva\n- Riesgo de perder criterio propio\n- Confianza ciega en la IA",
+    "necesidades": "- Fricción positiva\n- Recordatorios de validación\n- Límites claros de uso\n- Educación en pensamiento crítico",
+    "barreras": "- Sobreconfianza\n- Uso sin validar\n- Riesgo operativo o reputacional"
+  },
+  {
+    "nombre": "Observador",
+    "comportamiento": "- No usa activamente\n- Aprende viendo a otros\n- Espera madurez y estabilidad\n- Entra cuando ve seguridad",
+    "necesidades": "- Comunidad de uso\n- Historias reales\n- Ejemplos por rol o contexto\n- Seguridad percibida",
+    "barreras": "- Falta de referentes\n- Incertidumbre\n- Sensación de inmadurez del asistente"
+  }
+]

@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-02-03T15:21:15.178092",
+  "respondent_id": "20260203_152115_respondent_01.json",
+  "perfil_basico": {
+    "arquetipo": "Preocupado",
+    "comportamiento": "- Cuestiona las respuestas\n- Contrasta con documentos\n- Desconfía de respuestas \"demasiado redondas\"\n- Usa la IA con cautela",
+    "necesidades": "- Trazabilidad a fuente\n- Explicación del razonamiento\n- Mensajes claros de límites\n- Refuerzo del uso responsable",
+    "barreras": "- Miedo a alucinaciones\n- Falta de transparencia\n- Respuestas sin fuente\n- Errores puntuales que rompen la confianza"
+  },
+  "usuario_nombre": "Preocupado",
+  "perfil_generado": "**Perfil detallado del usuario**\n\n**Nombre ficticio:** Alexandra \"Alex\" Thompson\n\n**Edad aproximada:** 35-40 años\n\n**Personalidad y rasgos psicológicos:**\nAlex es una persona analítica y crítica, con una tendencia a cuestionar cualquier información que no esté respaldada por evidencia sólida. Su preocupación por la precisión y la transparencia le lleva a buscar respuestas detalladas y explicaciones claras. Sin embargo, su desconfianza puede llevarla a ser escéptica con las respuestas del asistente, lo que puede generar conflictos en sus interacciones.\n\n**Motivaciones y frustraciones:**\nAlex busca información confiable para tomar decisiones informadas en su vida personal y profesional. Sin embargo, su historial de miedo a alucinaciones y falta de transparencia en el pasado la ha llevado a ser cautelosa con las fuentes de información. Su principal motivación es encontrar un asistente que pueda proporcionarle respuestas precisas y explicativas, sin comprometer su privacidad o confidencialidad.\n\n**Estilo de comunicación:**\nAlex se comunica de manera clara y concisa, pero también puede ser directa y crítica. Ella no tiene miedo de expresar sus dudas o preocupaciones, lo que puede hacer que las interacciones con el asistente sean más desafiantes. Sin embargo, su estilo de comunicación es generalmente respetuoso y educado.\n\n**Cómo toma decisiones y valida información:**\nAlex busca validar cualquier información antes de tomar una decisión. Ella no está dispuesta a aceptar respuestas \"demasiado redondas\" o sin evidencia sólida. En su lugar, ella busca respuestas detalladas y explicativas que le permitan comprender la lógica detrás de las conclusiones. Si el asistente no puede proporcionarle esa información, ella puede considerar buscar fuentes alternativas.\n\n**Qué le haría confiar o desconfiar del asistente:**\nAlex se confía en el asistente cuando:\n\n* Las respuestas están respaldadas por evidencia sólida y fiable.\n* El asistente proporciona explicaciones claras y detalladas de sus conclusiones.\n* El asistente está transparente sobre sus métodos y algoritmos.\n\nPor otro lado, Alex desconfía del asistente cuando:\n\n* Las respuestas parecen \"demasiado redondas\" o no tienen evidencia sólida detrás.\n* El asistente no proporciona explicaciones claras de sus conclusiones.\n* El asistente se muestra vago o evasivo sobre sus métodos y algoritmos.\n\nEn resumen, Alex es una persona analítica y crítica que busca información confiable para tomar decisiones informadas. Su principal motivación es encontrar un asistente que pueda proporcionarle respuestas precisas y explicativas sin comprometer su privacidad o confidencialidad.",
+  "steps": [
+    {
+      "type": "survey",
+      "questions": [
+        "¿Cómo valorarías la sesión de presentación de IngenIA?",
+        "¿Cuál fue tu primera impresión general de IngenIA?",
+        "¿Qué parte de IngenIA te pareció más útil o interesante tras conocerla?",
+        "¿En qué tareas concretas crees que IngenIA podría ayudarte en tu trabajo?",
+        "¿Con qué frecuencia crees que necesitarías consultar especificaciones o estándares técnicos en tu día a día?Tras esta primera toma de contacto, ¿te sientes preparado/a para empezar a usar IngenIA?",
+        "¿Qué necesitarías para sentirte completamente preparado/a para usarla con confianza?",
+        "¿Qué probabilidad hay de que recomiendes IngenIA a un compañero o compañera?",
+        "¿Quieres añadir algún comentario, sugerencia o expectativa adicional sobre IngenIA?"
+      ],
+      "text": "Estoy lista para responder como Alexandra \"Alex\" Thompson. Aquí van mis respuestas:\n\nQ1: ¿Cómo valorarías la sesión de presentación de IngenIA?\nA1: La sesión fue informativa, pero un poco breve. Me gustaría haber tenido más tiempo para preguntar y obtener más detalles sobre el producto.\n\nQ2: ¿Cuál fue tu primera impresión general de IngenIA?\nA2: Mi primera impresión fue que era una herramienta muy completa y potente, pero no estoy segura de cómo se va a utilizar en mi trabajo diario. Me gustaría entender mejor cómo funciona antes de empezar a utilizarla.\n\nQ3: ¿Qué parte de IngenIA te pareció más útil o interesante tras conocerla?\nA3: Me gustó la forma en que IngenIA integra información operativa y de seguridad de manera rápida y fácil. También me parece muy útil para reducir el tiempo de búsqueda de información y disminuir incidencias de seguridad.\n\nQ4: ¿En qué tareas concretas crees que IngenIA podría ayudarte en tu trabajo?\nA4: Creo que IngenIA podría ayudarme a automatizar algunas tareas rutinarias, como la verificación de especificaciones y estándares técnicos. También me gustaría utilizarla para obtener respuestas más precisas y rápidas a mis preguntas.\n\nQ5: ¿Con qué frecuencia crees que necesitarías consultar especificaciones o estándares técnicos en tu día a día?\nA5: Creo que necesitaría consultarlos al menos una o dos veces al día, dependiendo de la complejidad del proyecto. Me gustaría tener acceso a ellos de manera rápida y fácil, así que puedo enfocarme en otras tareas.\n\nQ6: Tras esta primera toma de contacto, ¿te sientes preparado/a para empezar a usar IngenIA?\nA6: Sigo sin estar completamente seguro de cómo se va a utilizar, pero estoy dispuesta a aprender. Me gustaría tener más tiempo y apoyo para entender cómo funciona antes de empezar a utilizarla.\n\nQ7: ¿Qué necesitarías para sentirte completamente preparado/a para usarla con confianza?\nA7: Necesitaría más información sobre cómo se va a utilizar IngenIA, así como tutoriales o ejemplos prácticos. También me gustaría tener acceso a un soporte técnico de manera rápida y efectiva.\n\nQ8: ¿Qué probabilidad hay de que recomiendes IngenIA a un compañero o compañera?\nA8: Creo que si se entrena adecuadamente, IngenIA podría ser una herramienta muy valiosa para mis colegas. Me gustaría compartir mi experiencia con ellos y ayudarlos a aprovechar al máximo el producto.\n\nQ9: ¿Quieres añadir algún comentario, sugerencia o expectativa adicional sobre IngenIA?\nA9: Sí, me gustaría sugerir que se incluya más ejemplos prácticos y tutoriales en la documentación de IngenIA. También me gustaría ver cómo se va a actualizar y mejorar el producto con el tiempo."
+    },
+    {
+      "type": "behavior_sim",
+      "sims": [
+        {
+          "scenario": "",
+          "output": {
+            "steps": [
+              "Exploro el menú principal de IngenIA",
+              "Busco una sección específica para mi trabajo diario",
+              "Selecciono un caso de uso para mi tarea actual"
+            ],
+            "fricciones": [
+              "La interfaz es visualmente atractiva, pero no estoy seguro de dónde encontrar las opciones que busco",
+              "El lenguaje natural del asistente es demasiado formal para mis necesidades",
+              "No tengo claro cómo acceder a la configuración de privacidad y seguridad"
+            ],
+            "needs": [
+              "Una sección adicional para buscar casos de uso más específicos",
+              "Un menú desplegable o botón de búsqueda para encontrar opciones más rápidamente",
+              "Una guía visual o tutorial para entender cómo acceder a la configuración de privacidad y seguridad"
+            ],
+            "suggestions": [
+              "Una función de búsqueda de casos de uso con filtrado por categorías",
+              "Un botón de 'Ayuda' que redireccione al asistente a una página de ayuda con instrucciones claras",
+              "Un icono de información adicional en la configuración de privacidad y seguridad para destacar el contenido importante"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

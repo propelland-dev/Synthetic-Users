@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-02-03T13:01:28.348967",
+  "plan": {
+    "version": 1,
+    "research_type": "mixed",
+    "steps": [
+      {
+        "type": "survey",
+        "questions": [
+          "¿Cómo valorarías la sesión de presentación de IngenIA?",
+          "¿Cuál fue tu primera impresión general de IngenIA?",
+          "¿Qué parte de IngenIA te pareció más útil o interesante tras conocerla?",
+          "¿En qué tareas concretas crees que IngenIA podría ayudarte en tu trabajo?",
+          "¿Con qué frecuencia crees que necesitarías consultar especificaciones o estándares técnicos en tu día a día?Tras esta primera toma de contacto, ¿te sientes preparado/a para empezar a usar IngenIA?",
+          "¿Qué necesitarías para sentirte completamente preparado/a para usarla con confianza?",
+          "¿Qué probabilidad hay de que recomiendes IngenIA a un compañero o compañera?",
+          "¿Quieres añadir algún comentario, sugerencia o expectativa adicional sobre IngenIA?"
+        ]
+      },
+      {
+        "type": "behavior_sim",
+        "scenarios": []
+      }
+    ]
+  }
+}

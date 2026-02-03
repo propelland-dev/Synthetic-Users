@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-02-03T16:17:09.865266",
+  "respondent_id": "20260203_161709_respondent_01.json",
+  "perfil_basico": {
+    "arquetipo": "Preocupado",
+    "comportamiento": "- Cuestiona las respuestas\n- Contrasta con documentos\n- Desconfía de respuestas \"demasiado redondas\"\n- Usa la IA con cautela",
+    "necesidades": "- Trazabilidad a fuente\n- Explicación del razonamiento\n- Mensajes claros de límites\n- Refuerzo del uso responsable",
+    "barreras": "- Miedo a alucinaciones\n- Falta de transparencia\n- Respuestas sin fuente\n- Errores puntuales que rompen la confianza"
+  },
+  "usuario_nombre": "Preocupado",
+  "perfil_generado": "**Perfil Detallado de Usuario Sintético: \"Alex Chen\"**\n\n**Nombre Ficticio:** Alex Chen\n\n**Personalidad y Rasgos Psicológicos:**\nAlex es una persona analítica y crítica, con un fuerte sentido de la duda y la búsqueda de verdad. Es un pensador lógico y racional, que valora la precisión y la transparencia en la información. Su personalidad es caracterizada por ser predecible y consistente, lo que le permite establecer patrones y expectativas claras.\n\n**Motivaciones y Frustraciones:**\nAlex busca obtener información precisa y confiable para tomar decisiones informadas. Sin embargo, su miedo a alucinaciones y la falta de transparencia en la respuesta pueden generar frustración y desconfianza. Le molesta cuando las respuestas no son claras o no tienen fuente, lo que le lleva a cuestionar la confiabilidad del asistente.\n\n**Estilo de Comunicación:**\nAlex es directo y claro en su comunicación, sin rodeos ni ambigüedad. Busca mensajes breves y concisos que le permitan entender la información de manera rápida y eficiente. Sin embargo, también puede ser complejo y detallado al mismo tiempo, lo que requiere una respuesta clara y precisa.\n\n**Cómo Toma Decisiones y Valida Información:**\nAlex valora la precisión y la transparencia en la información. Ante cualquier duda o inquietud, busca respuestas claras y explicativas. Se enfoca en los detalles y los datos concretos, lo que puede generar una búsqueda exhaustiva de información antes de tomar una decisión.\n\n**Qué Le Haría Confiar o Desconfiar del Asistente:**\n* **Confianza:** Alex se confía cuando el asistente proporciona respuestas claras y precisas, con fuente de apoyo. También se confía cuando el asistente explica el razonamiento detrás de la respuesta y ofrece explicaciones detalladas.\n* **Desconfianza:** Alex desconfía cuando las respuestas son \"demasiado redondas\" o carecen de transparencia. También desconfía cuando los errores puntuales rompen la confianza y no se ofrecen explicaciones claras.\n\n**Barreras Típicas de Adopción:**\nAlex es propenso a las barreras típicas de adopción, como el miedo a alucinaciones y la falta de transparencia. También puede ser reacio a utilizar un asistente que no cumpla con sus expectativas de precisión y claridad.\n\nEn resumen, Alex Chen es un usuario sintético preocupado por obtener información precisa y confiable. Busca respuestas claras y explicativas, valora la transparencia y se enfoca en los detalles. Sin embargo, su miedo a alucinaciones y falta de confianza pueden generar barreras típicas de adopción.",
+  "steps": [
+    {
+      "type": "survey",
+      "questions": [
+        "¿Cómo valorarías la sesión de presentación de IngenIA?",
+        "¿Cuál fue tu primera impresión general de IngenIA?",
+        "¿Qué parte de IngenIA te pareció más útil o interesante tras conocerla?",
+        "¿En qué tareas concretas crees que IngenIA podría ayudarte en tu trabajo?",
+        "¿Con qué frecuencia crees que necesitarías consultar especificaciones o estándares técnicos en tu día a día?Tras esta primera toma de contacto, ¿te sientes preparado/a para empezar a usar IngenIA?",
+        "¿Qué necesitarías para sentirte completamente preparado/a para usarla con confianza?",
+        "¿Qué probabilidad hay de que recomiendes IngenIA a un compañero o compañera?",
+        "¿Quieres añadir algún comentario, sugerencia o expectativa adicional sobre IngenIA?"
+      ],
+      "text": "Claro, te responderé como Alex Chen.\n\n Q1: ¿Cómo valorarías la sesión de presentación de IngenIA?\n\nA1: La sesión fue informativa y bien estructurada. Me pareció interesante cómo se explicaron los beneficios y las características de IngenIA. Aunque no me sentí completamente preparado para empezar a usarla, me dio una buena idea general de lo que puede hacer.\n\n Q2: ¿Cuál fue tu primera impresión general de IngenIA?\n\nA2: Mi primera impresión fue que es un asistente avanzado y potente. Me pareció sorprendente la cantidad de información que se puede acceder a través de él. Sin embargo, también me dio algo de nerviosismo al pensar en la complejidad de su función.\n\n Q3: ¿Qué parte de IngenIA te pareció más útil o interesante tras conocerla?\n\nA3: Me gustó especialmente la parte sobre la búsqueda de información estructurada y no estructurada. Me pareció muy práctica y podría ser una herramienta valiosa para mi trabajo diario.\n\n Q4: ¿En qué tareas concretas crees que IngenIA podría ayudarte en tu trabajo?\n\nA4: Creo que podría ayudarme a automatizar algunas tareas de investigación y análisis, lo que me permitiría enfocarme más en la toma de decisiones estratégicas. También podría ser útil para acceder a información de seguridad y operativa de manera rápida y eficiente.\n\n Q5: ¿Con qué frecuencia crees que necesitarías consultar especificaciones o estándares técnicos en tu día a día?\n\nA5: Creo que necesitaría consultarlos una vez al mes, o cuando se actualicen. La idea es tener una base de conocimiento actualizada para poder tomar decisiones informadas.\n\n Q6: Tras esta primera toma de contacto, ¿te sientes preparado/a para empezar a usar IngenIA?\n\nA6: Sigo sintiéndome un poco incómodo con la complejidad del asistente. Me gustaría tener más práctica y tiempo de prueba antes de empezar a usarlo en producción.\n\n Q7: ¿Qué necesitarías para sentirte completamente preparado/a para usarla con confianza?\n\nA7: Creo que necesitaría una sesión de entrenamiento adicional, donde se me mostraran ejemplos prácticos de cómo se puede utilizar IngenIA en diferentes situaciones. También sería útil tener acceso a un soporte técnico continuo.\n\n Q8: ¿Qué probabilidad hay de que recomiendes IngenIA a un compañero o compañera?\n\nA8: Creo que sí, si puedo experimentar con la herramienta y ver sus beneficios en acción. La idea es que sea una herramienta valiosa para el equipo y mejorar nuestra productividad.\n\n Q9: ¿Quieres añadir algún comentario, sugerencia o expectativa adicional sobre IngenIA?\n\nA9: Sí, creo que sería útil tener una sección de \"preguntas frecuentes\" en el sitio web o la documentación, donde se puedan responder preguntas comunes y se ofrezcan soluciones a problemas comunes. También me gustaría ver cómo se actualiza la herramienta y qué nuevas características se agreguen con el tiempo."
+    },
+    {
+      "type": "behavior_sim",
+      "sims": [
+        {
+          "scenario": "",
+          "output": {
+            "steps": [
+              "Completar el formulario de contacto",
+              "Verificar las funcionalidades y características de IngenIA",
+              " leer manual de instrucciones",
+              "Buscar información adicional si es necesario"
+            ],
+            "fricciones": [
+              "No tengo claro qué función cumple IngenIA en mi trabajo",
+              "La interfaz es un poco confusa para mí",
+              "Me cuesta encontrar la información que busco",
+              "Necesito más tiempo para entender cómo funciona"
+            ],
+            "needs": [
+              "Una explicación clara y concisa de las funcionalidades principales de IngenIA",
+              "Un ejemplo práctico de cómo se aplica IngenIA en un escenario real",
+              "Información adicional sobre la seguridad y privacidad del producto",
+              "Acompañamiento y soporte técnico para ayudarme a entender el sistema"
+            ],
+            "suggestions": [
+              "Señalar las funcionalidades más útiles de IngenIA",
+              "Ofrecer un tutorial personalizado o un curso en línea",
+              "Proporcionar información adicional sobre la seguridad y privacidad del producto",
+              "Crear una sección de preguntas frecuentes para reducir la confusión"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,187 +1,297 @@
 # Moeve Synthetic Users
 
-Sistema para generar y gestionar usuarios sintéticos para investigación de productos. Permite configurar usuarios sintéticos, productos, metodologías de investigación y visualizar resultados de manera integrada.
+Sistema para **definir usuarios sintéticos** (arquetipo + 3 dimensiones), **describir un producto/experiencia**, y ejecutar una **investigación automatizada** con un LLM local (Ollama) que devuelve un **único informe** de resultados.
 
-## 🎯 Características
+El flujo está dividido en:
+- **Frontend**: Streamlit (UI) para configurar y lanzar la investigación.
+- **Backend**: FastAPI (API) que persiste configs/resultados y llama a Ollama.
 
-- **Configuración de Usuarios Sintéticos**: Define parámetros demográficos, intereses y características de usuarios sintéticos
-- **Configuración de Producto**: Establece detalles del producto o servicio a evaluar
-- **Configuración de Investigación**: Define metodología, objetivos y métricas de investigación
-- **Visualización de Resultados**: Dashboard interactivo para analizar resultados y métricas
+## Características
 
-## 📁 Estructura del Proyecto
+- **Usuario sintético por dimensiones**: arquetipo + comportamiento + necesidades + barreras.
+- **Producto/experiencia como contexto**: una descripción libre (no limitado a chatbots).
+- **Investigación como texto libre**: una descripción/brief (puede incluir preguntas dentro del propio texto).
+- **Resultado único**: el backend genera un **informe en texto** (`resultados["resultado"]`).
+- **Prompts configurables**: `prompt_perfil` y `prompt_investigacion` editables desde la UI.
+- **Persistencia simple**: archivos JSON en `frontend/configs/` (UI) y `backend/storage/` (backend).
+- **Exportación**: descarga de resultados a **PDF** desde la UI.
+
+## Estructura del proyecto
 
 ```
 .
-├── frontend/                    # Aplicación Streamlit
-│   ├── app.py                  # Aplicación principal
-│   ├── config.py               # Configuración de la API
-│   └── sections/               # Secciones de la aplicación
-│       ├── __init__.py
-│       ├── syntetic_users.py   # Sección: Usuarios Sintéticos
-│       ├── product.py          # Sección: Producto
-│       ├── research.py    # Sección: Investigación
-│       └── results.py           # Sección: Resultados
-├── backend/                    # API FastAPI
-│   └── api/
-│       └── main.py             # API principal
-├── requirements.txt            # Dependencias del proyecto
-└── README.md                   # Este archivo
+├── frontend/                      # App Streamlit
+│   ├── app.py                     # Entry point UI
+│   ├── config.py                  # Cliente HTTP hacia el backend
+│   ├── utils.py                   # Guardar/cargar configs locales
+│   ├── configs/                   # Configs locales (UI)
+│   │   ├── arquetipos.json
+│   │   ├── config_syntetic_user.json
+│   │   ├── config_producto.json
+│   │   ├── config_investigacion.json
+│   │   └── config_system.json
+│   └── sections/                  # Pantallas (render_*)
+│       ├── syntetic_users.py
+│       ├── product.py
+│       ├── research.py
+│       ├── results.py
+│       └── config.py
+├── backend/                       # API FastAPI + lógica
+│   ├── api/
+│   │   ├── main.py                # App FastAPI
+│   │   └── routes/                # Endpoints
+│   │       ├── usuario.py
+│   │       ├── producto.py
+│   │       ├── investigacion.py
+│   │       ├── resultados.py
+│   │       └── llm.py
+│   ├── core/                      # Lógica de negocio
+│   │   ├── llm_client.py          # Cliente Ollama
+│   │   ├── synthetic_user.py      # Generación de perfil
+│   │   └── research_engine.py     # Generación del informe
+│   ├── storage/                   # Persistencia del backend (JSON)
+│   │   ├── usuarios/
+│   │   ├── productos/
+│   │   ├── investigaciones/
+│   │   └── resultados/
+│   └── config.py                  # Defaults + env vars
+├── requirements.txt
+└── README.md
 ```
 
-## 🚀 Instalación
+## Requisitos
 
-### Prerrequisitos
+- **Python**: 3.8+ (probado con 3.13).
+- **Ollama** corriendo en local.
+- **Modelo** descargado en Ollama (por defecto: `llama3.2:latest`).
 
-- Python 3.8 o superior
-- pip (gestor de paquetes de Python)
+## Instalación
 
-### Pasos de instalación
+### Ollama (local)
 
-1. **Clonar el repositorio** (si aplica):
+- Instalar Ollama: ver `https://ollama.ai`.
+- Descargar modelo:
+
 ```bash
-git clone <repository-url>
-cd 202601-Moeve-Syntetic-Users
+ollama pull llama3.2:latest
 ```
 
-2. **Crear entorno virtual**:
+- Levantar Ollama (si no lo hace como servicio):
+
 ```bash
-python3.13 -m venv venv
+ollama serve
 ```
 
-3. **Activar entorno virtual**:
-   - En macOS/Linux:
-   ```bash
-   source venv/bin/activate
-   ```
-   - En Windows:
-   ```bash
-   venv\Scripts\activate
-   ```
+Por defecto: `http://localhost:11434`.
 
-4. **Instalar dependencias**:
+### Proyecto (Python)
+
 ```bash
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 💻 Uso
+## Ejecución
 
-### Frontend (Streamlit)
-
-Para ejecutar la aplicación web:
-
-```bash
-cd frontend
-streamlit run app.py
-```
-
-La aplicación estará disponible en: **http://localhost:8501**
-
-#### Navegación
-
-La aplicación cuenta con 4 secciones principales accesibles desde el sidebar:
-
-1. **👥 Usuarios Sintéticos**: Configuración de parámetros para generar usuarios sintéticos
-   - Número de usuarios
-   - Rango de edad
-   - Géneros
-   - Ubicaciones geográficas
-   - Nivel educativo
-   - Ingresos
-   - Intereses
-   - Experiencia tecnológica
-
-2. **📦 Producto**: Configuración del producto a evaluar
-   - Información básica (nombre, categoría, tipo, versión)
-   - Descripción y características
-   - Precio y modelo de negocio
-   - Público objetivo
-
-3. **🔬 Investigación**: Configuración de la metodología de investigación
-   - Tipo de investigación
-   - Objetivos
-   - Duración y frecuencia
-   - Métricas a evaluar
-   - Preguntas específicas
-   - Escenarios de uso
-
-4. **📊 Resultados**: Visualización y análisis de resultados
-   - Estado de la investigación
-   - Métricas principales
-   - Feedback de usuarios
-   - Análisis por segmentos
-   - Exportación de reportes
-
-### Backend (FastAPI)
-
-Para ejecutar la API:
+### 1) Backend (FastAPI)
 
 ```bash
 cd backend
 uvicorn api.main:app --reload
 ```
 
-La API estará disponible en: **http://localhost:8000**
+- API: `http://localhost:8000`
+- Swagger: `http://localhost:8000/docs`
 
-#### Endpoints disponibles
-
-- `GET /` - Estado de la API
-- `POST /api/usuarios` - Guardar configuración de usuarios
-- `POST /api/producto` - Guardar configuración de producto
-- `POST /api/investigacion` - Guardar configuración de investigación
-- `POST /api/investigacion/iniciar` - Iniciar investigación
-- `GET /api/resultados` - Obtener resultados
-
-#### Documentación de la API
-
-Una vez que la API esté ejecutándose, puedes acceder a:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-## ⚙️ Configuración
-
-### Variables de entorno
-
-Puedes configurar la URL de la API mediante una variable de entorno:
+### 2) Frontend (Streamlit)
 
 ```bash
-export API_BASE_URL=http://localhost:8000
+cd frontend
+streamlit run app.py
 ```
 
-O modificar directamente el archivo `frontend/config.py`.
+UI: `http://localhost:8501`
 
-## 🔧 Desarrollo
+## Flujo de uso (end-to-end)
 
-### Estructura de secciones
+1. **Usuario sintético** (`frontend/sections/syntetic_users.py`)
+   - Define: `arquetipo`, `comportamiento`, `necesidades`, `barreras`.
+   - Guarda local (`frontend/configs/config_syntetic_user.json`) y envía al backend (`POST /api/usuario`).
 
-Cada sección del frontend es un módulo independiente en `frontend/sections/` que exporta una función `render_*()` que contiene toda la lógica de la interfaz.
+2. **Producto** (`frontend/sections/product.py`)
+   - Define: `descripcion`.
+   - Guarda local (`frontend/configs/config_producto.json`) y envía al backend (`POST /api/producto`).
 
-### Estado de la aplicación
+3. **Investigación** (`frontend/sections/research.py`)
+   - Define: `descripcion` (brief). Puedes incluir preguntas en el texto si lo deseas.
+   - Guarda local (`frontend/configs/config_investigacion.json`) y envía al backend (`POST /api/investigacion`).
 
-El estado se gestiona mediante `st.session_state` de Streamlit, permitiendo persistir configuraciones entre secciones.
+4. **Sistema / prompts** (`frontend/sections/config.py`) **(recomendado)**
+   - Ajusta: `llm_provider`, `temperatura`, `max_tokens`.
+   - Edita: `prompt_perfil` y **`prompt_investigacion`**.
+   - Guarda en `frontend/configs/config_system.json`.
 
-## 📦 Dependencias principales
+5. **Iniciar investigación**
+   - Botón “Iniciar investigación” llama a `POST /api/investigacion/iniciar`.
+   - El backend carga la última config guardada (usuario/producto/investigación) desde `backend/storage/`.
+   - Se genera:
+     - Perfil del usuario (`SyntheticUser.generate_profile`)
+     - Informe final (`ResearchEngine.execute`) en `resultados["resultado"]`
+   - Se guarda un JSON en `backend/storage/resultados/*_investigacion.json`.
 
-- **streamlit**: Framework para la aplicación web
-- **fastapi**: Framework para la API REST
-- **pandas**: Manipulación y análisis de datos
-- **uvicorn**: Servidor ASGI para FastAPI
-- **requests**: Cliente HTTP para comunicación con la API
+6. **Resultados**
+   - Renderiza `resultados["resultado"]` (Markdown) y permite exportar a PDF.
 
-Ver `requirements.txt` para la lista completa de dependencias.
+## Configuración
 
-## 🛠️ Próximos pasos
+### Variables de entorno (backend)
 
-- [ ] Implementar integración completa con la API
-- [ ] Agregar persistencia de datos
-- [ ] Mejorar visualizaciones de resultados
-- [ ] Agregar autenticación y autorización
-- [ ] Implementar exportación de reportes (PDF, Excel)
+En `backend/config.py` se leen:
 
-## 📝 Licencia
+```bash
+export OLLAMA_BASE_URL="http://localhost:11434"
+export LLAMA_PROVIDER="ollama"
+export LLAMA_MODEL="llama3.2:latest"
+export LLAMA_TEMPERATURE="0.7"
+export LLAMA_MAX_TOKENS="1000"
+```
 
-[Especificar licencia si aplica]
+### Variables de entorno (frontend)
 
-## 👥 Contribuidores
+En `frontend/config.py`:
 
-[Agregar información de contribuidores si aplica]
+```bash
+export API_BASE_URL="http://localhost:8000"
+```
+
+## Prompts y placeholders soportados
+
+### Prompt de perfil (`prompt_perfil`)
+
+Se formatea con las claves:
+- `{arquetipo}`, `{comportamiento}`, `{necesidades}`, `{barreras}`
+
+Nota: el backend mantiene **compatibilidad** con prompts antiguos que usen `{edad}`, `{genero}`, `{ubicacion}`, etc. Si faltan, se sustituyen por `N/A`.
+
+### Prompt de investigación (`prompt_investigacion`)
+
+El backend genera el informe con:
+- `{nombre_usuario}`
+- `{perfil_usuario}`
+- `{nombre_producto}` (si no existe, usa “Producto”)
+- `{descripcion_producto}`
+- `{investigacion_descripcion}`
+
+Importante: el endpoint `POST /api/investigacion/iniciar` **requiere** que el frontend envíe `system_config.prompt_investigacion` (si no, devuelve 400).
+
+## API (contrato rápido)
+
+### Salud y estado
+
+- `GET /` → estado básico.
+- `GET /health` → health check.
+- `GET /api/llm/status` → estado de conexión con Ollama (lista modelos, modelo activo, etc.).
+
+### Configuración
+
+- `POST /api/usuario`
+
+```json
+{
+  "arquetipo": "Explorador",
+  "comportamiento": "…",
+  "necesidades": "…",
+  "barreras": "…"
+}
+```
+
+- `POST /api/producto`
+
+```json
+{ "descripcion": "…" }
+```
+
+- `POST /api/investigacion`
+
+```json
+{ "descripcion": "…" }
+```
+
+### Ejecutar investigación
+
+- `POST /api/investigacion/iniciar`
+
+```json
+{
+  "system_config": {
+    "llm_provider": "ollama",
+    "temperatura": 0.7,
+    "max_tokens": 1000,
+    "prompt_perfil": "…",
+    "prompt_investigacion": "…"
+  }
+}
+```
+
+Respuesta (simplificada):
+
+```json
+{
+  "status": "success",
+  "message": "Investigación completada",
+  "resultados": {
+    "timestamp": "2026-01-29T…",
+    "usuario": { "arquetipo": "…", "comportamiento": "…", "necesidades": "…", "barreras": "…" },
+    "usuario_nombre": "Explorador",
+    "producto": { "descripcion": "…", "nombre_producto": "Producto" },
+    "investigacion": { "descripcion": "…" },
+    "resultado": "…",
+    "resultado_id": "20260129_123456_investigacion.json"
+  }
+}
+```
+
+### Resultados
+
+- `GET /api/resultados` → lista de resultados (ids y metadatos).
+- `GET /api/resultados/latest` → JSON del último resultado.
+- `GET /api/resultados/{resultado_id}` → JSON de un resultado (id sin `.json`).
+
+## Persistencia de datos
+
+- **Frontend** (`frontend/configs/`): últimos valores usados en la UI.
+- **Backend** (`backend/storage/`): histórico de configs y resultados con timestamps.
+
+Recomendación: tratar `backend/storage/` como **datos generados** (no código). Si se versionan, hacerlo de forma intencional.
+
+## Solución de problemas
+
+### “Falta 'prompt_investigacion'…”
+
+El backend exige `prompt_investigacion` al iniciar la investigación.
+- Ve a **Configuración** en la UI, guarda la configuración del sistema y vuelve a ejecutar.
+
+### Ollama no conecta
+
+```bash
+ollama serve
+ollama list
+```
+
+Y revisa `OLLAMA_BASE_URL`.
+
+### Frontend no conecta al backend
+
+- Verifica backend en `http://localhost:8000/health`.
+- Revisa `API_BASE_URL` (frontend) si cambiaste puertos.
+
+### La investigación tarda mucho o da timeout
+
+- Reduce `max_tokens`.
+- Usa un modelo más ligero en Ollama.
+
+## Notas de desarrollo
+
+- No se usa LangChain; el backend llama a Ollama por HTTP (`/api/generate`).
+- Actualmente el proveedor soportado es **Ollama** (ChatGPT está preparado pero no implementado en `LLMClient`).

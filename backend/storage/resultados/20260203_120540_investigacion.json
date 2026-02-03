@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-02-03T12:05:40.093083",
+  "resultado_id": "20260203_120540_investigacion.json",
+  "usuario": {
+    "arquetipo": "X",
+    "comportamiento": "",
+    "necesidades": "",
+    "barreras": ""
+  },
+  "usuario_nombre": "X",
+  "producto": {
+    "nombre_producto": "P",
+    "descripcion": "D"
+  },
+  "investigacion": {
+    "descripcion": "I"
+  },
+  "resultado": "OK",
+  "plan": {
+    "version": 1,
+    "research_type": "mixed",
+    "steps": [
+      {
+        "type": "survey",
+        "questions": [
+          "Queremos una entrevista sobre el producto. ¿Qué te gusta? ¿Qué no?"
+        ]
+      },
+      {
+        "type": "interview",
+        "n_questions": 6,
+        "questions": []
+      }
+    ]
+  },
+  "respondents": [
+    {
+      "respondent_id": "20260203_120540_respondent_01.json",
+      "arquetipo": "X"
+    }
+  ],
+  "artifacts": {
+    "plan_id": "20260203_120540_plan.json"
+  }
+}
