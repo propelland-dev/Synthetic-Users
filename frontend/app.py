@@ -11,6 +11,7 @@ from config import (
     enviar_usuario,
     enviar_producto,
     enviar_investigacion,
+    generar_ficha_producto,
     iniciar_investigacion,
     iniciar_investigacion_stream,
     obtener_resultados_latest,
@@ -135,7 +136,15 @@ def _is_complete_usuario(cfg: dict) -> bool:
     return all(isinstance(cfg.get(k), str) and cfg.get(k).strip() for k in ["arquetipo", "comportamiento", "necesidades", "barreras"])
 
 def _is_complete_producto(cfg: dict) -> bool:
-    return isinstance(cfg, dict) and isinstance(cfg.get("descripcion"), str) and cfg.get("descripcion").strip() != ""
+    if not isinstance(cfg, dict):
+        return False
+    # Consideramos completo si hay una descripción canónica (ficha o input).
+    desc = cfg.get("descripcion")
+    if isinstance(desc, str) and desc.strip():
+        return True
+    # Compat/fallback: si aún no se construyó `descripcion` pero hay input, también vale.
+    inp = cfg.get("descripcion_input")
+    return isinstance(inp, str) and inp.strip() != ""
 
 def _is_complete_investigacion(cfg: dict) -> bool:
     return isinstance(cfg, dict) and isinstance(cfg.get("descripcion"), str) and cfg.get("descripcion").strip() != ""
@@ -159,6 +168,38 @@ def _run_investigacion_from_sidebar(current_section: str, run_slot):
     investigacion_cfg = build_investigacion_config_from_state()
     system_cfg = build_system_config_from_state()
 
+    def _has_producto_data(cfg: dict) -> bool:
+        if not isinstance(cfg, dict):
+            return False
+        for k in [
+            "nombre_producto",
+            "descripcion_input",
+            "problema_a_resolver",
+            "propuesta_valor",
+            "funcionalidades_clave",
+            "fuentes_a_ingestar",
+            "observaciones",
+            "riesgos",
+            "dependencias",
+        ]:
+            v = cfg.get(k)
+            if isinstance(v, str) and v.strip():
+                return True
+        return False
+
+    # 1.5) Asegurar ficha de producto (si hay prompt configurado)
+    try:
+        if isinstance(system_cfg, dict) and system_cfg.get("prompt_ficha_producto") and _has_producto_data(producto_cfg):
+            ficha_actual = (producto_cfg or {}).get("ficha_producto")
+            if not isinstance(ficha_actual, str) or not ficha_actual.strip():
+                ficha = generar_ficha_producto(producto_cfg, system_cfg)
+                if isinstance(ficha, str) and ficha.strip():
+                    producto_cfg["ficha_producto"] = ficha
+                    producto_cfg["descripcion"] = ficha
+    except Exception:
+        # Si falla, continuamos con la descripción existente (fallback)
+        pass
+
     # 2) Validate
     missing = []
     if not _is_complete_producto(producto_cfg):
@@ -169,31 +210,45 @@ def _run_investigacion_from_sidebar(current_section: str, run_slot):
         missing.append("Usuario sintético")
 
     if missing:
-        st.sidebar.error(f"Completa: {', '.join(missing)}.")
+        # Mensaje específico para producto (pedido)
+        if "Producto" in missing:
+            st.sidebar.error("Falta datos de producto.")
+        else:
+            st.sidebar.error(f"Completa: {', '.join(missing)}.")
         return
 
     with st.spinner("🔄 Ejecutando investigación..."):
         # 3) Persist local always (avoid stale configs)
         from utils import guardar_config
         guardar_config("usuario", usuario_cfg)
-        guardar_config("producto", producto_cfg)
+        # Guardar campos del producto y ficha en archivos separados
+        producto_fields = dict(producto_cfg or {})
+        ficha_val = str(producto_fields.pop("ficha_producto", "") or "").strip()
+        # `producto_fields` debe guardar los inputs; no la ficha
+        if isinstance(producto_fields.get("descripcion_input"), str):
+            producto_fields["descripcion"] = str(producto_fields.get("descripcion_input") or "").strip()
+        guardar_config("producto", producto_fields)
+        existing_ficha = cargar_config("producto_ficha") if existe_config("producto_ficha") else {}
+        existing_ficha = existing_ficha if isinstance(existing_ficha, dict) else {}
+        merged = dict(existing_ficha)
+        merged["ficha_producto"] = ficha_val
+        merged.setdefault("generated_at", None)
+        merged.setdefault("fields_hash", None)
+        guardar_config("producto_ficha", merged)
         guardar_config("investigacion", investigacion_cfg)
         if system_cfg:
             guardar_config("system", system_cfg)
 
         # 4) Sync backend (best effort)
-        if not st.session_state.get("usuario_config_synced_backend"):
-            r = enviar_usuario(usuario_cfg)
-            if r:
-                st.session_state["usuario_config_synced_backend"] = True
-        if not st.session_state.get("producto_config_synced_backend"):
-            r = enviar_producto(producto_cfg)
-            if r:
-                st.session_state["producto_config_synced_backend"] = True
-        if not st.session_state.get("investigacion_config_synced_backend"):
-            r = enviar_investigacion(investigacion_cfg)
-            if r:
-                st.session_state["investigacion_config_synced_backend"] = True
+        r = enviar_usuario(usuario_cfg)
+        if r:
+            st.session_state["usuario_config_synced_backend"] = True
+        r = enviar_producto(producto_cfg)
+        if r:
+            st.session_state["producto_config_synced_backend"] = True
+        r = enviar_investigacion(investigacion_cfg)
+        if r:
+            st.session_state["investigacion_config_synced_backend"] = True
 
         # 5) Keep session consistent
         st.session_state["usuario_config"] = usuario_cfg

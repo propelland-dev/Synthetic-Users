@@ -92,12 +92,59 @@ def build_producto_config_from_state() -> Dict[str, Any]:
     if isinstance(existing, dict):
         return dict(existing)
 
-    local = _load_local("producto")
-    if local:
-        return dict(local)
+    local_fields = _load_local("producto")
+    local_ficha = _load_local("producto_ficha")
+    if local_fields:
+        cfg = dict(local_fields)
+        # Asegurar que `descripcion` represente el input si no hay ficha
+        if not (isinstance(cfg.get("descripcion"), str) and str(cfg.get("descripcion")).strip()):
+            if isinstance(cfg.get("descripcion_input"), str):
+                cfg["descripcion"] = str(cfg.get("descripcion_input") or "").strip()
 
-    descripcion = st.session_state.get("producto_descripcion")
-    return {"descripcion": str(descripcion or "")}
+        ficha = ""
+        if isinstance(local_ficha, dict):
+            ficha = str(local_ficha.get("ficha_producto") or "").strip()
+        if ficha:
+            # Si hay ficha persistida, el `descripcion` canónico para investigación es la ficha
+            cfg["ficha_producto"] = ficha
+            cfg["descripcion"] = ficha
+        return cfg
+
+    # Nuevo esquema guiado (con fallback a descripción input)
+    producto_tipo = st.session_state.get("producto_tipo") or "nuevo"
+    nombre = (st.session_state.get("producto_nombre") or "").strip()
+    descripcion_input = str(st.session_state.get("producto_descripcion_input") or "")
+    ficha = str(st.session_state.get("producto_ficha") or "").strip()
+
+    descripcion_canonica = ficha or descripcion_input
+    cfg: Dict[str, Any] = {
+        "producto_tipo": str(producto_tipo),
+        "descripcion_input": descripcion_input,
+        "problema_a_resolver": str(st.session_state.get("producto_problema") or ""),
+        "propuesta_valor": str(st.session_state.get("producto_propuesta") or ""),
+        "funcionalidades_clave": str(st.session_state.get("producto_funcionalidades") or ""),
+        "canal_soporte": str(st.session_state.get("producto_canal_soporte") or ""),
+        "productos_sustitutivos": str(st.session_state.get("producto_sustitutivos") or ""),
+        "fuentes_a_ingestar": str(st.session_state.get("producto_fuentes_ingestar") or ""),
+        "observaciones": str(st.session_state.get("producto_observaciones") or ""),
+        "riesgos": str(st.session_state.get("producto_riesgos") or ""),
+        "dependencias": str(st.session_state.get("producto_dependencias") or ""),
+        "ficha_producto": ficha or None,
+        "descripcion": str(descripcion_canonica or "").strip(),
+    }
+    if nombre:
+        cfg["nombre_producto"] = nombre
+    if str(producto_tipo).strip().lower() == "existente":
+        url = str(st.session_state.get("producto_url") or "").strip()
+        if url:
+            cfg["url"] = url
+        # Los adjuntos son metadatos temporales; si no existen, omitimos
+        docs = st.session_state.get("producto_docs")
+        fotos = st.session_state.get("producto_fotos")
+        # No es trivial serializar UploadedFile; la UI ya guarda metadatos en `producto_config`.
+        # Aquí no persistimos binarios.
+    # Limpiar None
+    return {k: v for k, v in cfg.items() if v is not None}
 
 
 def build_investigacion_config_from_state() -> Dict[str, Any]:
@@ -126,6 +173,7 @@ def build_system_config_from_state() -> Dict[str, Any]:
     modelo_path = st.session_state.get("system_modelo_path")
     prompt_perfil = st.session_state.get("system_prompt_perfil")
     prompt_investigacion = st.session_state.get("system_prompt_investigacion")
+    prompt_ficha_producto = st.session_state.get("system_prompt_ficha_producto")
 
     cfg = dict(local or {})
     if isinstance(llm_provider, str):
@@ -146,6 +194,8 @@ def build_system_config_from_state() -> Dict[str, Any]:
         cfg["prompt_perfil"] = prompt_perfil
     if isinstance(prompt_investigacion, str):
         cfg["prompt_investigacion"] = prompt_investigacion
+    if isinstance(prompt_ficha_producto, str):
+        cfg["prompt_ficha_producto"] = prompt_ficha_producto
 
     # AnythingLLM optional fields
     for k in [
@@ -176,7 +226,22 @@ def autosave_section(section: str) -> None:
     if section == "producto":
         cfg = build_producto_config_from_state()
         st.session_state["producto_config"] = cfg
-        guardar_config("producto", cfg)
+
+        # Guardar campos (sin ficha) y ficha en archivos separados
+        fields_cfg = dict(cfg)
+        ficha_value = str(fields_cfg.pop("ficha_producto", "") or "").strip()
+        # El archivo de campos debe reflejar los inputs, no la ficha antigua.
+        if isinstance(fields_cfg.get("descripcion_input"), str):
+            fields_cfg["descripcion"] = str(fields_cfg.get("descripcion_input") or "").strip()
+        guardar_config("producto", fields_cfg)
+        # No machacar metadatos (generated_at/fields_hash) al autosave.
+        existing_ficha = cargar_config("producto_ficha") if existe_config("producto_ficha") else {}
+        existing_ficha = existing_ficha if isinstance(existing_ficha, dict) else {}
+        merged = dict(existing_ficha)
+        merged["ficha_producto"] = ficha_value
+        merged.setdefault("generated_at", None)
+        merged.setdefault("fields_hash", None)
+        guardar_config("producto_ficha", merged)
         return
     if section == "investigacion":
         cfg = build_investigacion_config_from_state()

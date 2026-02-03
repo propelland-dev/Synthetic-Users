@@ -233,6 +233,45 @@ No lo estructures como preguntas y respuestas; entrega un informe compacto y cla
         help="Variables disponibles: {nombre_usuario}, {perfil_usuario}, {nombre_producto}, {descripcion_producto}, {investigacion_descripcion}",
         key="system_prompt_investigacion",
     )
+
+    # Prompt para generar ficha de producto
+    st.markdown("#### Prompt: Generación de Ficha de Producto")
+    prompt_ficha_producto_default = """Eres un asistente de research. Con los datos estructurados de un producto, genera una “Ficha de producto” en español (Markdown), clara y accionable.
+
+DATOS
+- Tipo: {producto_tipo}  (nuevo/existente)
+- Nombre: {nombre_producto}
+- Descripción (input libre): {descripcion_input}
+- Problema a resolver: {problema_a_resolver}
+- Propuesta de valor: {propuesta_valor}
+- Funcionalidades clave: {funcionalidades_clave}
+- Canal de soporte: {canal_soporte}
+- Productos sustitutivos: {productos_sustitutivos}
+- Fuentes a ingestar: {fuentes_a_ingestar}
+- Observaciones: {observaciones}
+- Riesgos: {riesgos}
+- Dependencias: {dependencias}
+
+SI ES EXISTENTE (opcional)
+- URL: {url}
+- Documentos: {documentos}
+- Fotos: {fotos}
+
+REQUISITOS DE SALIDA
+- Devuelve SOLO Markdown.
+- Incluye secciones: Resumen, Problema, Propuesta de valor, Alcance/No alcance, Funcionalidades clave, Soporte/Operación, Sustitutivos/Alternativas, Riesgos, Dependencias, Fuentes a ingestar, Observaciones, Preguntas abiertas.
+- Si falta información, no inventes: marca “(pendiente)” y añade preguntas concretas a “Preguntas abiertas”.
+"""
+
+    prompt_ficha_producto = st.text_area(
+        "Prompt para generar ficha de producto",
+        value=(
+            (config_cargada or {}).get("prompt_ficha_producto") or prompt_ficha_producto_default
+        ),
+        height=220,
+        help="Variables disponibles: {producto_tipo}, {nombre_producto}, {descripcion_input}, {problema_a_resolver}, {propuesta_valor}, {funcionalidades_clave}, {canal_soporte}, {productos_sustitutivos}, {fuentes_a_ingestar}, {observaciones}, {riesgos}, {dependencias}, {url}, {documentos}, {fotos}",
+        key="system_prompt_ficha_producto",
+    )
     
     # Mantener config en sesión siempre actualizada (se persistirá al cambiar de página)
     st.session_state["system_config"] = {
@@ -242,6 +281,7 @@ No lo estructures como preguntas y respuestas; entrega un informe compacto y cla
         "modelo_path": st.session_state.get("system_modelo_path") or "",
         "prompt_perfil": prompt_perfil,
         "prompt_investigacion": prompt_investigacion,
+        "prompt_ficha_producto": prompt_ficha_producto,
         "anythingllm_base_url": st.session_state.get("system_anythingllm_base_url"),
         "anythingllm_api_key": st.session_state.get("system_anythingllm_api_key"),
         "anythingllm_workspace_slug": st.session_state.get("system_anythingllm_workspace_slug"),
@@ -259,6 +299,7 @@ No lo estructures como preguntas y respuestas; entrega un informe compacto y cla
             "system_modelo_path",
             "system_prompt_perfil",
             "system_prompt_investigacion",
+            "system_prompt_ficha_producto",
             "system_anythingllm_base_url",
             "system_anythingllm_api_key",
             "system_anythingllm_workspace_slug",

@@ -14,6 +14,7 @@ CONFIG_DIR.mkdir(exist_ok=True)
 CONFIG_FILES = {
     "usuario": CONFIG_DIR / "config_syntetic_user.json",
     "producto": CONFIG_DIR / "config_producto.json",
+    "producto_ficha": CONFIG_DIR / "config_producto_ficha.json",
     "investigacion": CONFIG_DIR / "config_investigacion.json",
     "system": CONFIG_DIR / "config_system.json"
 }

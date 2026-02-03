@@ -13,6 +13,7 @@ API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 API_ENDPOINTS = {
     "usuario": f"{API_BASE_URL}/api/usuario",
     "producto": f"{API_BASE_URL}/api/producto",
+    "producto_ficha": f"{API_BASE_URL}/api/producto/generar_ficha",
     "investigacion": f"{API_BASE_URL}/api/investigacion",
     "resultados": f"{API_BASE_URL}/api/resultados",
     "iniciar": f"{API_BASE_URL}/api/investigacion/iniciar",
@@ -49,6 +50,29 @@ def enviar_producto(config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return response.json()
     except Exception as e:
         print(f"Error al enviar producto: {e}")
+        return None
+
+
+def generar_ficha_producto(producto_config: Dict[str, Any], system_config: Dict[str, Any]) -> Optional[str]:
+    """
+    Genera la ficha del producto (Markdown) usando el backend + LLM.
+    """
+    try:
+        payload = {"producto": producto_config, "system_config": system_config}
+        response = requests.post(API_ENDPOINTS["producto_ficha"], json=payload, timeout=300)
+        if response.status_code >= 400:
+            try:
+                err = response.json()
+                raise Exception(err.get("detail") or err.get("message") or str(err))
+            except Exception:
+                raise Exception(response.text or f"HTTP {response.status_code}")
+        data = response.json()
+        if isinstance(data, dict) and data.get("status") == "success":
+            ficha = data.get("ficha_producto")
+            return str(ficha) if ficha is not None else ""
+        return None
+    except Exception as e:
+        print(f"Error al generar ficha de producto: {e}")
         return None
 
 
