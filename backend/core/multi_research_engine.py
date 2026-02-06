@@ -85,6 +85,9 @@ class MultiResearchEngine:
         self.respondents = respondents
         self.producto = producto
         self.investigacion_descripcion = investigacion_descripcion
+        # Usamos `llm_client` como "prototipo" de configuración.
+        # Para evitar compartir estado entre respondientes (p.ej. throttling/estado interno),
+        # creamos instancias nuevas para cada respondiente y otra para la síntesis final.
         self.llm_client = llm_client
         self.plan = plan
         self.prompt_perfil = prompt_perfil
@@ -92,6 +95,19 @@ class MultiResearchEngine:
 
         self._run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         self._run_iso = datetime.now().isoformat()
+
+    def _fresh_llm_client(self) -> LLMClient:
+        """
+        Crea un LLMClient nuevo clonando configuración del prototipo.
+
+        Nota: actualmente no usamos memoria conversacional, pero esto evita
+        compartir estado interno de la instancia (p.ej. throttling) entre usuarios
+        y entre ejecución/síntesis.
+        """
+        proto = self.llm_client
+        provider = getattr(proto, "provider", "llama")
+        config = dict(getattr(proto, "config", {}) or {})
+        return LLMClient(provider=provider, config=config)
 
     def _resultados_dir(self) -> Path:
         d = STORAGE_DIR / "resultados"
@@ -219,9 +235,11 @@ class MultiResearchEngine:
             steps = []
 
         for idx, perfil_basico in enumerate(self.respondents):
+            # Instancia nueva por respondiente (evitar compartir estado entre usuarios)
+            llm_client_r = self._fresh_llm_client()
             # 1) Perfil
             usuario = SyntheticUser(perfil_basico)
-            perfil_det = usuario.generate_profile(self.llm_client, self.prompt_perfil)
+            perfil_det = usuario.generate_profile(llm_client_r, self.prompt_perfil)
             perfil_text = (perfil_det or {}).get("perfil_generado", "")
             nombre = (perfil_det or {}).get("nombre") or usuario.nombre or f"Respondent_{idx+1}"
 
@@ -242,7 +260,7 @@ class MultiResearchEngine:
                     out = ""
                     if questions:
                         batch_prompt = self._survey_batch_prompt(nombre, perfil_text, questions)
-                        out = self.llm_client.generate(batch_prompt)
+                        out = llm_client_r.generate(batch_prompt)
                     artifact_steps.append({"type": "survey", "questions": questions, "text": out})
 
                 elif stype == "interview":
@@ -252,7 +270,7 @@ class MultiResearchEngine:
                     except Exception:
                         n_i = 6
                     prompt = self._interview_single_prompt(nombre, perfil_text, n_questions=n_i, seed=idx + 1)
-                    out = self.llm_client.generate(prompt)
+                    out = llm_client_r.generate(prompt)
                     artifact_steps.append({"type": "interview", "n_questions": n_i, "text": out})
 
                 elif stype == "behavior_sim":
@@ -262,7 +280,7 @@ class MultiResearchEngine:
                     sims = []
                     for sc in scenarios:
                         prompt = self._behavior_sim_prompt(nombre, perfil_text, sc if isinstance(sc, str) else "")
-                        out = self.llm_client.generate(prompt)
+                        out = llm_client_r.generate(prompt)
                         parsed = _safe_json_parse(out)
                         sims.append({"scenario": sc, "output": parsed or {"raw": out}})
                     artifact_steps.append({"type": "behavior_sim", "sims": sims})
@@ -319,7 +337,9 @@ class MultiResearchEngine:
             + artifacts_json
         )
 
-        resultado_texto = self.llm_client.generate(synthesis_prompt)
+        # Instancia nueva para síntesis (separada de las instancias por usuario)
+        llm_client_s = self._fresh_llm_client()
+        resultado_texto = llm_client_s.generate(synthesis_prompt)
 
         # 4) Resultado final (compatibilidad UI)
         final_filename = f"{self._run_ts}_investigacion.json"
@@ -346,7 +366,7 @@ class MultiResearchEngine:
         self._save_json(final_filename, final)
         return final
 
-    def execute_stream(self):
+    def execute_stream(self, cancel_check=None):
         """
         Ejecuta la investigación emitiendo eventos de progreso.
 
@@ -356,6 +376,12 @@ class MultiResearchEngine:
             {"event": "step_done", "i": 1, "n": 10, "step_type": "survey", "message": "..."}
             {"event": "done", "result": {...}}
         """
+        def _is_cancelled() -> bool:
+            try:
+                return bool(cancel_check()) if callable(cancel_check) else False
+            except Exception:
+                return False
+
         # Guardar plan
         plan_id = f"{self._run_ts}_plan.json"
         self._save_json(plan_id, {"timestamp": self._run_iso, "plan": self.plan})
@@ -373,6 +399,9 @@ class MultiResearchEngine:
             total = 1
 
         for idx, perfil_basico in enumerate(self.respondents):
+            if _is_cancelled():
+                yield {"event": "cancelled", "message": "Investigación cancelada por el usuario."}
+                return
             arquetipo = (perfil_basico or {}).get("arquetipo", "Personalizado") if isinstance(perfil_basico, dict) else "Personalizado"
             yield {
                 "event": "respondent_start",
@@ -384,8 +413,13 @@ class MultiResearchEngine:
 
             # 1) Perfil
             yield {"event": "profile_start", "i": idx + 1, "n": total, "message": f"Generando perfil del respondiente {idx+1}/{total}..."}
+            if _is_cancelled():
+                yield {"event": "cancelled", "message": "Investigación cancelada por el usuario."}
+                return
+            # Instancia nueva por respondiente (evitar compartir estado entre usuarios)
+            llm_client_r = self._fresh_llm_client()
             usuario = SyntheticUser(perfil_basico if isinstance(perfil_basico, dict) else {})
-            perfil_det = usuario.generate_profile(self.llm_client, self.prompt_perfil)
+            perfil_det = usuario.generate_profile(llm_client_r, self.prompt_perfil)
             perfil_text = (perfil_det or {}).get("perfil_generado", "")
             nombre = (perfil_det or {}).get("nombre") or usuario.nombre or f"Respondent_{idx+1}"
             yield {"event": "profile_done", "i": idx + 1, "n": total, "message": f"Perfil generado ({nombre})."}
@@ -399,6 +433,9 @@ class MultiResearchEngine:
                 stype = step.get("type")
                 if not stype:
                     continue
+                if _is_cancelled():
+                    yield {"event": "cancelled", "message": "Investigación cancelada por el usuario."}
+                    return
 
                 yield {
                     "event": "step_start",
@@ -415,8 +452,11 @@ class MultiResearchEngine:
                     questions = [q for q in questions if isinstance(q, str) and q.strip()]
                     out = ""
                     if questions:
+                        if _is_cancelled():
+                            yield {"event": "cancelled", "message": "Investigación cancelada por el usuario."}
+                            return
                         batch_prompt = self._survey_batch_prompt(nombre, perfil_text, questions)
-                        out = self.llm_client.generate(batch_prompt)
+                        out = llm_client_r.generate(batch_prompt)
                     artifact_steps.append({"type": "survey", "questions": questions, "text": out})
 
                 elif stype == "interview":
@@ -425,8 +465,11 @@ class MultiResearchEngine:
                         n_i = max(1, int(n_questions))
                     except Exception:
                         n_i = 6
+                    if _is_cancelled():
+                        yield {"event": "cancelled", "message": "Investigación cancelada por el usuario."}
+                        return
                     prompt = self._interview_single_prompt(nombre, perfil_text, n_questions=n_i, seed=idx + 1)
-                    out = self.llm_client.generate(prompt)
+                    out = llm_client_r.generate(prompt)
                     artifact_steps.append({"type": "interview", "n_questions": n_i, "text": out})
 
                 elif stype == "behavior_sim":
@@ -435,8 +478,11 @@ class MultiResearchEngine:
                         scenarios = [""]
                     sims = []
                     for sc in scenarios:
+                        if _is_cancelled():
+                            yield {"event": "cancelled", "message": "Investigación cancelada por el usuario."}
+                            return
                         prompt = self._behavior_sim_prompt(nombre, perfil_text, sc if isinstance(sc, str) else "")
-                        out = self.llm_client.generate(prompt)
+                        out = llm_client_r.generate(prompt)
                         parsed = _safe_json_parse(out)
                         sims.append({"scenario": sc, "output": parsed or {"raw": out}})
                     artifact_steps.append({"type": "behavior_sim", "sims": sims})
@@ -472,6 +518,9 @@ class MultiResearchEngine:
             }
 
         # 3) Síntesis agregada
+        if _is_cancelled():
+            yield {"event": "cancelled", "message": "Investigación cancelada por el usuario."}
+            return
         yield {"event": "synthesis_start", "message": "Generando síntesis agregada..."}
         prompt_template = self.prompt_sintesis or DEFAULT_PROMPTS["investigacion"]
 
@@ -507,7 +556,12 @@ class MultiResearchEngine:
             + artifacts_json
         )
 
-        resultado_texto = self.llm_client.generate(synthesis_prompt)
+        if _is_cancelled():
+            yield {"event": "cancelled", "message": "Investigación cancelada por el usuario."}
+            return
+        # Instancia nueva para síntesis (separada de las instancias por usuario)
+        llm_client_s = self._fresh_llm_client()
+        resultado_texto = llm_client_s.generate(synthesis_prompt)
         yield {"event": "synthesis_done", "message": "Síntesis completada."}
 
         # 4) Resultado final (compatibilidad UI)

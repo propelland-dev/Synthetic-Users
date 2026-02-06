@@ -69,7 +69,24 @@ def build_usuario_config_from_state() -> Dict[str, Any]:
 
         # If user over-allocates we still persist what they have (UI already shows error),
         # but we do not "fix" it silently.
-        return {"mode": "population", "population": {"n": int(n), "mix": mix_out}}
+        demografia = None
+        if st.session_state.get("usuario_demo_enabled"):
+            age_range = st.session_state.get("usuario_edad_range") or (25, 55)
+            try:
+                lo = int(age_range[0])
+                hi = int(age_range[1])
+            except Exception:
+                lo, hi = 25, 55
+            if hi < lo:
+                lo, hi = hi, lo
+            try:
+                rh = float(st.session_state.get("usuario_ratio_hombres") or 0.5)
+            except Exception:
+                rh = 0.5
+            rh = max(0.0, min(1.0, rh))
+            demografia = {"edad_min": lo, "edad_max": hi, "ratio_hombres": rh}
+
+        return {"mode": "population", "population": {"n": int(n), "mix": mix_out, "demografia": demografia}}
 
     # mode == single
     arquetipo = st.session_state.get("usuario_arquetipo") or "Personalizado"
@@ -156,8 +173,12 @@ def build_investigacion_config_from_state() -> Dict[str, Any]:
     if local:
         return dict(local)
 
+    estilo = st.session_state.get("investigacion_estilo") or ""
     descripcion = st.session_state.get("investigacion_descripcion")
-    return {"descripcion": str(descripcion or "")}
+    cfg: Dict[str, Any] = {"descripcion": str(descripcion or "")}
+    if isinstance(estilo, str) and estilo.strip():
+        cfg["estilo_investigacion"] = estilo.strip()
+    return cfg
 
 
 def build_system_config_from_state() -> Dict[str, Any]:

@@ -17,6 +17,11 @@
         "necesidades": "- Conversación fluida\n- Libertad para experimentar\n- Capacidad de iterar\n- Feedback rápido",
         "barreras": "- Respuestas rígidas\n- Demasiadas restricciones\n- Falta de evolución del producto"
       }
-    ]
+    ],
+    "demografia": {
+      "edad_min": 31,
+      "edad_max": 55,
+      "ratio_hombres": 0.5
+    }
   }
 }

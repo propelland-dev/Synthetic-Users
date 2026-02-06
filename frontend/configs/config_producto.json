@@ -1,15 +1,15 @@
 {
   "producto_tipo": "nuevo",
   "nombre_producto": "IngeniIA",
-  "descripcion_input": "jju",
-  "problema_a_resolver": "",
-  "propuesta_valor": "",
+  "descripcion_input": "Asistente de IA generativa para el área de\ningeniería, con el objetivo de facilitar la búsqueda de\ninformación que se encuentra en los documentos\nlocalizados en sharepoint sobre especificaciones y\nestándares técnicos del área de ingeniería y\nconstrucción\n\nEl grupo objetivo son Departamentos técnicos\nde ingeniería",
+  "problema_a_resolver": "El área de ingeniería maneja una gran cantidad de\ndocumentos que contienen especificaciones y\nestándares, lo cual ralentiza significativamente los\ntiempos de consulta.\nSe requiere una solución que facilite la búsqueda\nprecisa de estas especificaciones y estándares\ndentro de una variedad de información contextual.",
+  "propuesta_valor": "Con el desarrollo de esta iniciativa\nconseguiríamos los siguientes objetivos:\n• Aplicar tecnologías de IA generativa para la\noptimización de la búsqueda de documentación\ntécnica concreta.\n• Mejora en la eficiencia en la toma de decisiones.\n• Mayor facilidad y eficiencia en el acceso a la\ninformación.\n• Mejora en los tiempos de consulta.",
   "funcionalidades_clave": "",
-  "canal_soporte": "",
+  "canal_soporte": "Asistente de IA Gen",
   "productos_sustitutivos": "",
   "fuentes_a_ingestar": "",
-  "observaciones": "",
-  "riesgos": "",
+  "observaciones": "Dependencia con DSI para la creación de la ingesta entre el sharepoint y el data lake de ingeniería.",
+  "riesgos": "Toda la documentación del sharepoint es de libre acceso, no se requiere de permisos especiales.",
   "dependencias": "",
-  "descripcion": "jju"
+  "descripcion": "Asistente de IA generativa para el área de\ningeniería, con el objetivo de facilitar la búsqueda de\ninformación que se encuentra en los documentos\nlocalizados en sharepoint sobre especificaciones y\nestándares técnicos del área de ingeniería y\nconstrucción\n\nEl grupo objetivo son Departamentos técnicos\nde ingeniería"
 }

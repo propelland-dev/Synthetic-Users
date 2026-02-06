@@ -89,7 +89,7 @@ def _build_result_pdf_bytes(resultados: dict) -> bytes:
     return str(out).encode("latin-1")
 
 def render_resultados():
-    st.markdown('<div class="section-title">📊 Resultados de la Investigación</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title"><span class="material-symbols-outlined">analytics</span>Resultados de la Investigación</div>', unsafe_allow_html=True)
     
     st.markdown("""
     Visualiza el resultado generado a partir de tu investigación.
@@ -139,7 +139,7 @@ def render_resultados():
         # Artefactos por respondiente (si existen)
         respondents = resultados.get("respondents")
         if isinstance(respondents, list) and respondents:
-            with st.expander("🧾 Ver respondientes (IDs)", expanded=False):
+            with st.expander("Ver respondientes (IDs)", expanded=False):
                 st.write("Cada respondiente genera un artefacto JSON guardado en el backend.")
                 st.json(respondents)
 
@@ -147,7 +147,7 @@ def render_resultados():
         st.markdown("---")
         col_a, col_b = st.columns([1, 1])
         with col_a:
-            if st.button("📄 Generar PDF", use_container_width=True):
+            if st.button("Generar PDF", use_container_width=True, key="results_generate_pdf"):
                 try:
                     pdf_bytes = _build_result_pdf_bytes(resultados)
                     st.session_state["pdf_resultados_bytes"] = pdf_bytes
@@ -161,16 +161,17 @@ def render_resultados():
                 ts = (st.session_state.get("pdf_resultados_ts") or "").replace(":", "").replace(".", "")
                 filename = f"resultados_investigacion_{ts or 'export'}.pdf"
                 st.download_button(
-                    "⬇️ Descargar PDF",
+                    "Descargar PDF",
                     data=pdf_bytes,
                     file_name=filename,
                     mime="application/pdf",
                     use_container_width=True,
+                    key="results_download_pdf",
                 )
         
         # Botón para refrescar
         with col_b:
-            if st.button("🔄 Actualizar Resultados", use_container_width=True):
+            if st.button("Actualizar Resultados", use_container_width=True, key="results_refresh"):
                 with st.spinner("🔄 Actualizando datos desde la API..."):
                     resultado = obtener_resultados_latest()
                     if resultado:

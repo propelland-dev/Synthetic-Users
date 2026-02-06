@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 from sections.syntetic_users import render_usuarios_sinteticos
 from sections.product import render_producto
 from sections.research import render_investigacion
@@ -14,6 +15,9 @@ from config import (
     generar_ficha_producto,
     iniciar_investigacion,
     iniciar_investigacion_stream,
+    iniciar_investigacion_job,
+    obtener_job_events,
+    cancelar_investigacion_job,
     obtener_resultados_latest,
 )
 from utils import existe_config, cargar_config
@@ -65,9 +69,11 @@ def _set_current_section(section: str):
     except Exception:
         st.experimental_set_query_params(section=section)
 
-def _nav_button(label: str, section: str, active: str):
+def _nav_button(label: str, section: str, active: str, icon: str = None):
+    """Navigation button - Design 02 style: inactive has outline icon, active has filled icon"""
     is_active = section == active
-    # Primary para resaltar la sección activa
+    # Primary para resaltar la sección activa (filled icon, dark bg)
+    # Secondary para inactivas (outlined icon, transparent bg)
     clicked = st.sidebar.button(
         label,
         use_container_width=True,
@@ -172,7 +178,6 @@ def _run_investigacion_from_sidebar(current_section: str, run_slot):
         if not isinstance(cfg, dict):
             return False
         for k in [
-            "nombre_producto",
             "descripcion_input",
             "problema_a_resolver",
             "propuesta_valor",
@@ -217,7 +222,7 @@ def _run_investigacion_from_sidebar(current_section: str, run_slot):
             st.sidebar.error(f"Completa: {', '.join(missing)}.")
         return
 
-    with st.spinner("🔄 Ejecutando investigación..."):
+    with st.spinner("🔄 Preparando investigación..."):
         # 3) Persist local always (avoid stale configs)
         from utils import guardar_config
         guardar_config("usuario", usuario_cfg)
@@ -257,146 +262,141 @@ def _run_investigacion_from_sidebar(current_section: str, run_slot):
         if system_cfg:
             st.session_state["system_config"] = system_cfg
 
-        # 6) Run (stream progress if available)
-        status_box = run_slot
+        # 6) Start cancelable job (non-blocking)
+        run_id = iniciar_investigacion_job(system_cfg or st.session_state.get("system_config"))
+        if not run_id:
+            st.sidebar.error("❌ No se pudo iniciar la investigación (job).")
+            return
+        st.session_state["investigacion_run_id"] = run_id
+        st.session_state["investigacion_job_cursor"] = 0
+        st.session_state["investigacion_job_last_line"] = "Iniciando investigación..."
+        st.rerun()
 
-        def _short(text: str, max_len: int = 64) -> str:
-            t = str(text or "").strip().replace("\n", " ")
-            if len(t) <= max_len:
-                return t
-            return t[: max_len - 1].rstrip() + "…"
 
-        # Single-line human status + animated progress bar
-        current_line: str = ""
-        last_user_i: int | None = None
-        last_user_n: int | None = None
-        progress_step: int | None = None
-        progress_total: int | None = None
+def _render_job_progress(run_slot):
+    run_id = st.session_state.get("investigacion_run_id")
+    if not run_id:
+        return False
 
-        def _set_run_ui(line: str, progress: float | None, running: bool = True):
-            cls = "run-panel is-running" if running else "run-panel"
-            safe_line = f"<div class='run-line'>{_short(line, 80)}</div>" if line else ""
-            bar = ""
-            if progress is not None:
-                pct = max(0.0, min(1.0, float(progress)))
-                bar = (
-                    "<div class='run-bar'>"
-                    f"<div class='run-bar-fill' style='width:{pct*100:.1f}%'></div>"
-                    "</div>"
-                )
-            status_box.markdown(
-                f"<div class='{cls}'>" + safe_line + bar + "</div>",
-                unsafe_allow_html=True,
-            )
+    cursor = int(st.session_state.get("investigacion_job_cursor") or 0)
+    data = obtener_job_events(str(run_id), cursor=cursor) or {}
+    if not isinstance(data, dict) or data.get("status") != "success":
+        msg = (data or {}).get("message") or "No se pudo obtener estado."
+        run_slot.markdown(f"<div class='run-panel'><div class='run-line'>{msg}</div></div>", unsafe_allow_html=True)
+        return True
 
-        def _set_line(line: str):
-            nonlocal current_line
-            if not line:
-                return
-            current_line = line
+    events = data.get("events") if isinstance(data.get("events"), list) else []
+    st.session_state["investigacion_job_cursor"] = int(data.get("cursor") or cursor)
+    job_status = str(data.get("job_status") or "running")
 
-        def _progress_for(step: int | None, total: int | None) -> float | None:
+    # Update last line from events + recompute progress bar
+    def _short(text: str, max_len: int = 80) -> str:
+        t = str(text or "").strip().replace("\n", " ")
+        if len(t) <= max_len:
+            return t
+        return t[: max_len - 1].rstrip() + "…"
+
+    last_line = st.session_state.get("investigacion_job_last_line") or "Preparando investigación"
+    last_user_n = st.session_state.get("investigacion_job_last_user_n")
+    progress_step = st.session_state.get("investigacion_job_progress_step")
+    progress_total = st.session_state.get("investigacion_job_progress_total")
+
+    def _progress_for(step, total):
+        try:
             if step is None or total is None:
                 return None
-            try:
-                t = int(total)
-                s = int(step)
-            except Exception:
-                return None
+            t = int(total)
+            s = int(step)
             if t <= 0:
                 return None
             s = max(0, min(s, t))
             return float(s) / float(t)
-
-        used_stream = False
-        final_result = None
-
-        try:
-            for ev in iniciar_investigacion_stream(system_cfg or st.session_state.get("system_config")):
-                used_stream = True
-                if not isinstance(ev, dict):
-                    continue
-                if ev.get("event") == "error":
-                    _set_line("Error")
-                    _set_run_ui(current_line, None, running=False)
-                    st.sidebar.error(f"❌ {ev.get('message') or 'Error'}")
-                    return
-                if ev.get("event") == "done":
-                    final_result = ev.get("result")
-                    break
-
-                # Single-line dynamic status (prefer i/n)
-                i = ev.get("i")
-                n = ev.get("n")
-                step_type = ev.get("step_type")
-                event = ev.get("event")
-
-                if i is not None and n is not None:
-                    try:
-                        i_i = int(i)
-                        n_i = int(n)
-                    except Exception:
-                        i_i, n_i = None, None
-                else:
-                    i_i, n_i = None, None
-
-                # Map backend events -> 3 clear phases + smooth progress (2 steps per user + analysis + done)
-                if event in {"start", "planning", "plan_saved", "planning_done"}:
-                    _set_line("Preparando investigación")
-                    # Mostrar avance desde el primer evento (sin N aún)
-                    if progress_total is None:
-                        progress_total = 10
-                    progress_step = 1
-                elif event in {"respondent_start", "profile_start", "profile_done", "step_start", "step_done", "respondent_done"}:
-                    if i_i and n_i:
-                        last_user_i, last_user_n = i_i, n_i
-                        _set_line(f"Consulta usuario {i_i}/{n_i}")
-                        progress_total = (2 * n_i) + 2
-                        if event == "profile_done":
-                            progress_step = (2 * (i_i - 1)) + 1
-                        elif event == "respondent_done":
-                            progress_step = (2 * (i_i - 1)) + 2
-                        elif progress_step is None:
-                            progress_step = max(0, min((2 * (i_i - 1)) + 1, progress_total))
-                elif event in {"synthesis_start", "synthesis_done"}:
-                    _set_line("Generando análisis")
-                    if last_user_n:
-                        progress_total = (2 * int(last_user_n)) + 2
-                        progress_step = (2 * int(last_user_n)) + 1
-                else:
-                    # Fallback: show short message if provided
-                    msg = ev.get("message")
-                    if isinstance(msg, str) and msg.strip():
-                        _set_line(msg.strip())
-
-                prog = _progress_for(progress_step, progress_total)
-                _set_run_ui(current_line, prog, running=True)
         except Exception:
-            used_stream = False
+            return None
 
-        if used_stream and isinstance(final_result, dict):
-            _set_line("Completado")
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        event = ev.get("event")
+        i = ev.get("i")
+        n = ev.get("n")
+        if i is not None and n is not None:
+            try:
+                i_i = int(i)
+                n_i = int(n)
+            except Exception:
+                i_i, n_i = None, None
+        else:
+            i_i, n_i = None, None
+
+        # Mantener los textos "amigables" (compat con versión previa)
+        if event in {"start", "planning", "plan_saved", "planning_done"}:
+            last_line = "Preparando investigación"
+            progress_total = 10
+            progress_step = 1
+        elif event in {"respondent_start", "profile_start", "profile_done", "step_start", "step_done", "respondent_done"}:
+            if i_i and n_i:
+                last_user_n = n_i
+                last_line = f"Consulta usuario {i_i}/{n_i}"
+                progress_total = (2 * n_i) + 2
+                if event == "profile_done":
+                    progress_step = (2 * (i_i - 1)) + 1
+                elif event == "respondent_done":
+                    progress_step = (2 * (i_i - 1)) + 2
+                elif progress_step is None:
+                    progress_step = max(0, min((2 * (i_i - 1)) + 1, progress_total))
+        elif event in {"synthesis_start", "synthesis_done"}:
+            last_line = "Generando análisis"
+            if last_user_n:
+                progress_total = (2 * int(last_user_n)) + 2
+                progress_step = (2 * int(last_user_n)) + 1
+        elif event == "done":
+            last_line = "Completado"
             if last_user_n:
                 progress_total = (2 * int(last_user_n)) + 2
                 progress_step = progress_total
-            prog = _progress_for(progress_step, progress_total)
-            _set_run_ui(current_line, prog, running=False)
-            st.session_state["resultados_investigacion"] = final_result
-            st.session_state["section"] = "resultados"
-            try:
-                st.query_params["section"] = "resultados"
-            except Exception:
-                st.experimental_set_query_params(section="resultados")
-            st.rerun()
+        elif event in {"cancel_requested", "cancelled"}:
+            last_line = "Cancelando…"
+        elif event == "error":
+            last_line = "Error"
+        else:
+            # Fallback: mostrar mensaje del backend si es útil
+            msg = ev.get("message")
+            if isinstance(msg, str) and msg.strip():
+                last_line = msg.strip()
 
-        # Fallback: endpoint stream no disponible o falló -> modo legacy
-        current_line = "Preparando investigación"
-        _set_run_ui(current_line, 0.1, running=True)
-        result = iniciar_investigacion(system_cfg or st.session_state.get("system_config"))
-        if result and result.get("status") == "success":
-            current_line = "Completado"
-            _set_run_ui(current_line, 1.0, running=False)
-            st.session_state["resultados_investigacion"] = result.get("resultados", {})
+    st.session_state["investigacion_job_last_line"] = last_line
+    st.session_state["investigacion_job_last_user_n"] = last_user_n
+    st.session_state["investigacion_job_progress_step"] = progress_step
+    st.session_state["investigacion_job_progress_total"] = progress_total
+
+    prog = _progress_for(progress_step, progress_total)
+
+    cls = "run-panel is-running" if job_status == "running" else "run-panel"
+    bar_html = "<div class='run-bar'><div class='run-bar-fill' style='width:0%'></div></div>"
+    if prog is not None:
+        bar_html = "<div class='run-bar'>" + f"<div class='run-bar-fill' style='width:{prog*100:.1f}%'></div>" + "</div>"
+    run_slot.markdown(
+        f"<div class='{cls}'><div class='run-line'>{_short(last_line, 80)}</div>{bar_html}</div>",
+        unsafe_allow_html=True,
+    )
+
+    # Handle terminal statuses
+    if job_status == "done":
+        # Pull final result via last done event
+        final = None
+        for ev in reversed(events):
+            if isinstance(ev, dict) and ev.get("event") == "done":
+                final = ev.get("result")
+                break
+        if isinstance(final, dict):
+            st.session_state["resultados_investigacion"] = final
+            st.session_state.pop("investigacion_run_id", None)
+            st.session_state.pop("investigacion_job_cursor", None)
+            st.session_state.pop("investigacion_job_last_line", None)
+            st.session_state.pop("investigacion_job_last_user_n", None)
+            st.session_state.pop("investigacion_job_progress_step", None)
+            st.session_state.pop("investigacion_job_progress_total", None)
             st.session_state["section"] = "resultados"
             try:
                 st.query_params["section"] = "resultados"
@@ -404,74 +404,149 @@ def _run_investigacion_from_sidebar(current_section: str, run_slot):
                 st.experimental_set_query_params(section="resultados")
             st.rerun()
         else:
-            current_line = "Error"
-            _set_run_ui(current_line, None, running=False)
-            msg = (result or {}).get("detail") or "No se pudo iniciar la investigación."
-            st.sidebar.error(f"❌ {msg}")
+            # job done but no result yet; keep polling
+            return True
 
-# Sidebar - Navegación
-st.sidebar.title("🧭 Navegación")
-st.sidebar.markdown("---")
+    if job_status == "cancelled":
+        st.sidebar.warning("Investigación cancelada.")
+        st.session_state.pop("investigacion_run_id", None)
+        st.session_state.pop("investigacion_job_cursor", None)
+        st.session_state.pop("investigacion_job_last_line", None)
+        st.session_state.pop("investigacion_job_last_user_n", None)
+        st.session_state.pop("investigacion_job_progress_step", None)
+        st.session_state.pop("investigacion_job_progress_total", None)
+        return False
 
-# Sección actual (query param manda; permite navegación por links)
-param_section = _get_current_section()
-if st.session_state.get("section") != param_section:
-    st.session_state["section"] = param_section
-section_key = param_section
+    if job_status == "error":
+        st.sidebar.error("❌ Error en la investigación (revisa el backend).")
+        st.session_state.pop("investigacion_run_id", None)
+        st.session_state.pop("investigacion_job_cursor", None)
+        st.session_state.pop("investigacion_job_last_line", None)
+        st.session_state.pop("investigacion_job_last_user_n", None)
+        st.session_state.pop("investigacion_job_progress_step", None)
+        st.session_state.pop("investigacion_job_progress_total", None)
+        return False
 
-# Grupo principal
-st.sidebar.markdown('<div class="nav-group-title">SECCIONES</div>', unsafe_allow_html=True)
-_nav_button("📦 Producto", "producto", section_key)
-_nav_button("🔎 Investigación", "investigacion", section_key)
-_nav_button("👥 Usuario sintético", "usuarios", section_key)
-has_results = _ensure_results_loaded()
-if has_results:
-    _nav_button("📊 Resultados", "resultados", section_key)
+    return True
+
+# ============================================
+# NAVEGACIÓN - BOTONES DE STREAMLIT
+# ============================================
+
+# Iconos para cada sección (usados en CSS)
+# Los iconos se añaden vía CSS ::before
+
+# ============================================
+# RENDERIZAR NAVEGACIÓN
+# ============================================
+st.sidebar.markdown('<div class="sidebar-nav">', unsafe_allow_html=True)
+
+# Obtener sección actual
+current_section = _get_current_section()
+
+# Producto
+_nav_button("Producto", "producto", current_section)
+
+# Investigación
+_nav_button("Investigación", "investigacion", current_section)
+
+# Usuario sintético
+_nav_button("Usuario sintético", "usuarios", current_section)
+
+# Resultados
+_nav_button("Resultados", "resultados", current_section)
+
+# Separador visual
+st.sidebar.markdown('<div class="nav-separator"></div>', unsafe_allow_html=True)
+
+# Iniciar investigación
+is_running = bool(st.session_state.get("investigacion_run_id"))
+if not is_running:
+    if st.sidebar.button("Iniciar investigación", use_container_width=True, key="btn_run"):
+        _run_investigacion_from_sidebar(current_section, st.sidebar.empty())
 else:
-    _nav_button_disabled("📊 Resultados", reason="Aún no hay resultados. Ejecuta una investigación para habilitar esta sección.")
+    if st.sidebar.button("Cancelar investigación", use_container_width=True, key="btn_cancel"):
+        rid = str(st.session_state.get("investigacion_run_id") or "")
+        if rid:
+            cancelar_investigacion_job(rid)
+        st.session_state.pop("investigacion_run_id", None)
+        st.session_state.pop("investigacion_job_cursor", None)
+        st.sidebar.error("Investigación cancelada.")
+        st.rerun()
 
-st.sidebar.markdown("---")
+# Separador visual antes de Configuración
+st.sidebar.markdown('<div class="nav-separator"></div>', unsafe_allow_html=True)
 
-# Acción global
-st.sidebar.markdown('<div class="nav-group-title">ACCIÓN</div>', unsafe_allow_html=True)
-clicked_run = st.sidebar.button("🚀 Iniciar investigación", type="primary", use_container_width=True)
+# Configuración
+_nav_button("Configuración", "config", current_section)
 
-# Reservar siempre el hueco (para que AJUSTES no "salte" cuando aparece el progreso)
-# Debe ir DEBAJO del botón.
-run_slot = st.sidebar.empty()
-run_slot.markdown(
-    "<div class='run-panel is-idle'>"
-    "<div class='run-line'>&nbsp;</div>"
-    "<div class='run-bar'><div class='run-bar-fill' style='width:0%'></div></div>"
-    "</div>",
-    unsafe_allow_html=True,
-)
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-if clicked_run:
-    _run_investigacion_from_sidebar(section_key, run_slot)
+# ============================================
+# LOG DE INVESTIGACIÓN
+# ============================================
+if st.session_state.get("investigacion_run_id"):
+    run_slot = st.sidebar.empty()
+    still_running = _render_job_progress(run_slot)
+    if still_running:
+        time.sleep(1.0)
+        st.rerun()
+else:
+    # Reservar espacio para que no salte el layout
+    st.sidebar.markdown(
+        "<div class='run-panel is-idle'>"
+        "<div class='run-line'>&nbsp;</div>"
+        "<div class='run-bar'><div class='run-bar-fill' style='width:0%'></div></div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
-st.sidebar.markdown("---")
+# ============================================
+# HEADER - DISEÑO 02
+# ============================================
+st.markdown("""
+<div class="moeve-header">
+    <div class="moeve-header-logo">
+        <!-- Logo SVG placeholder - replace with actual moeve logo -->
+        <svg viewBox="0 0 100 40" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="10" width="30" height="20" rx="4" fill="#004656"/>
+            <text x="8" y="25" font-family="Arial, sans-serif" font-size="12" fill="white" font-weight="bold">moeve</text>
+        </svg>
+    </div>
+    <div class="moeve-header-user">
+        <div class="moeve-header-user-info">
+            <div class="moeve-header-user-name">Nombre Apellido</div>
+            <div class="moeve-header-user-role">Investigador</div>
+        </div>
+        <div class="moeve-header-avatar">NA</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# AJUSTES (no pinned; estable por el hueco reservado del progreso)
-st.sidebar.markdown('<div class="nav-group-title">AJUSTES</div>', unsafe_allow_html=True)
-_nav_button("⚙️ Configuración", "config", section_key)
-
-# Contenido principal
-st.markdown(f'<div class="main-header">Sistema de Usuarios Sintéticos</div>', unsafe_allow_html=True)
-
-# Renderizar la sección seleccionada
-if section_key == "usuarios":
+# ============================================
+# RENDERIZAR SECCIÓN SELECCIONADA
+# ============================================
+if current_section == "usuarios":
     render_usuarios_sinteticos()
-elif section_key == "producto":
+elif current_section == "producto":
     render_producto()
-elif section_key == "investigacion":
+elif current_section == "investigacion":
     render_investigacion()
-elif section_key == "resultados":
+elif current_section == "resultados":
     render_resultados()
-elif section_key == "config":
+elif current_section == "config":
     render_config()
 
-# Footer con estados (sticky)
+# Footer con estados - Design 02 style
+st.sidebar.markdown("""
+<style>
+    .sidebar-status {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+</style>
+""", unsafe_allow_html=True)
 backend_status, llm_status = _get_statuses()
 backend_ok = backend_status.get("status") == "connected"
 llm_ok = llm_status.get("status") == "connected"
@@ -496,7 +571,7 @@ llm_pill_text = "rgba(22, 110, 62, 0.95)" if llm_ok else "rgba(140, 32, 24, 0.95
 
 st.sidebar.markdown(
     f"""
-    <div class="sidebar-footer">
+    <div class="sidebar-status">
       <div style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;padding:0.65rem 0.75rem;margin:0.35rem 0;border-radius:12px;background:rgba(52, 152, 219, 0.08);border:1px solid rgba(52, 152, 219, 0.18);color:rgba(30,30,30,0.92);">
         <span style="font-size:0.95rem;font-weight:600;white-space:nowrap;color:rgba(30,30,30,0.92);">Backend</span>
         <span style="display:inline-flex;align-items:center;justify-content:center;padding:0.22rem 0.55rem;border-radius:999px;font-size:0.78rem;font-weight:700;letter-spacing:0.02em;white-space:nowrap;background:{backend_pill_bg};border:1px solid {backend_pill_border};color:{backend_pill_text};">{backend_state}</span>

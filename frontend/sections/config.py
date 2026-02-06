@@ -8,7 +8,7 @@ from config import verificar_ollama, verificar_llm
 from utils import cargar_config, existe_config
 
 def render_config():
-    st.markdown('<div class="section-title">⚙️ Configuración del Sistema</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title"><span class="material-symbols-outlined">settings</span>Configuración del Sistema</div>', unsafe_allow_html=True)
     
     st.markdown("""
     Configure los prompts internos y la selección del modelo de lenguaje.
@@ -199,7 +199,7 @@ Sé específico y realista. No inventes datos que contradigan las 3 dimensiones;
         "Prompt para generar perfil de usuario sintético",
         value=(prompt_perfil_default if is_legacy else (prompt_perfil_guardado or prompt_perfil_default)),
         height=200,
-        help="Variables disponibles: {arquetipo}, {comportamiento}, {necesidades}, {barreras}",
+        help="Variables disponibles: {arquetipo}, {comportamiento}, {necesidades}, {barreras}, {edad}, {genero}",
         key="system_prompt_perfil",
     )
     
@@ -290,7 +290,7 @@ REQUISITOS DE SALIDA
 
     # Acciones
     st.markdown("---")
-    if st.button("🔄 Restaurar por Defecto", use_container_width=True):
+    if st.button("Restaurar por Defecto", use_container_width=True, key="config_restore_defaults"):
         st.session_state['system_config'] = None
         for k in [
             "system_llm_provider",

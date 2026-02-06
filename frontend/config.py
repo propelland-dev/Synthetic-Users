@@ -18,6 +18,8 @@ API_ENDPOINTS = {
     "resultados": f"{API_BASE_URL}/api/resultados",
     "iniciar": f"{API_BASE_URL}/api/investigacion/iniciar",
     "iniciar_stream": f"{API_BASE_URL}/api/investigacion/iniciar_stream",
+    "job_start": f"{API_BASE_URL}/api/investigacion/job/start",
+    "job_events": f"{API_BASE_URL}/api/investigacion/job",
     "health": f"{API_BASE_URL}/health",
 }
 
@@ -148,6 +150,52 @@ def iniciar_investigacion_stream(system_config: Optional[Dict[str, Any]] = None)
                 yield {"event": "progress", "message": data}
     except Exception as e:
         yield {"event": "error", "message": f"Error al iniciar investigación (stream): {e}"}
+
+
+def iniciar_investigacion_job(system_config: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """
+    Inicia una investigación como job cancelable. Devuelve run_id.
+    """
+    try:
+        payload: Dict[str, Any] = {}
+        if system_config:
+            payload["system_config"] = system_config
+        resp = requests.post(API_ENDPOINTS["job_start"], json=payload, timeout=20)
+        resp.raise_for_status()
+        data = resp.json()
+        if isinstance(data, dict) and data.get("status") == "success":
+            return str(data.get("run_id") or "")
+        return None
+    except Exception as e:
+        print(f"Error al iniciar investigación (job): {e}")
+        return None
+
+
+def obtener_job_events(run_id: str, cursor: int = 0) -> Optional[Dict[str, Any]]:
+    """
+    Recupera eventos del job desde un cursor.
+    """
+    try:
+        url = f"{API_ENDPOINTS['job_events']}/{run_id}/events"
+        resp = requests.get(url, params={"cursor": int(cursor or 0)}, timeout=20)
+        if resp.status_code >= 400:
+            try:
+                return {"status": "error", "message": resp.json().get("detail")}
+            except Exception:
+                return {"status": "error", "message": resp.text}
+        return resp.json()
+    except Exception as e:
+        return {"status": "error", "message": f"Error al obtener eventos: {e}"}
+
+
+def cancelar_investigacion_job(run_id: str) -> bool:
+    try:
+        url = f"{API_ENDPOINTS['job_events']}/{run_id}/cancel"
+        resp = requests.post(url, timeout=20)
+        return resp.status_code < 400
+    except Exception as e:
+        print(f"Error al cancelar job: {e}")
+        return False
 
 
 # Compatibilidad con versiones anteriores del frontend

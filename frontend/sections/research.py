@@ -7,7 +7,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from utils import cargar_config, existe_config
 
 def render_investigacion():
-    st.markdown('<div class="section-title">🔎 Investigación</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title"><span class="material-symbols-outlined">travel_explore</span>Investigación</div>', unsafe_allow_html=True)
     
     st.markdown("""
     Describe la investigación. Si quieres hacer una entrevista, puedes incluir las preguntas dentro de esta descripción
@@ -16,6 +16,30 @@ def render_investigacion():
     
     # Cargar configuración guardada si existe
     config_cargada = cargar_config("investigacion") if existe_config("investigacion") else None
+    config_cargada = config_cargada if isinstance(config_cargada, dict) else {}
+
+    # Estilo de investigación
+    st.markdown("### Estilo de investigación")
+    estilos = [
+        "Cuestionario cerrado",
+        "Entrevista abierta",
+        "Observación / Shadowing",
+        "Simulación de comportamiento",
+        "Diarios",
+        "Prototipos",
+    ]
+
+    if "investigacion_estilo" not in st.session_state:
+        saved = str(config_cargada.get("estilo_investigacion") or "").strip()
+        st.session_state["investigacion_estilo"] = saved if saved in estilos else "Entrevista abierta"
+
+    st.selectbox(
+        "Estilo de investigación",
+        options=estilos,
+        index=estilos.index(st.session_state["investigacion_estilo"]) if st.session_state["investigacion_estilo"] in estilos else 1,
+        key="investigacion_estilo",
+        help="Este estilo se incluirá al inicio del contexto de investigación.",
+    )
     
     # Descripción de investigación (nuevo modelo)
     st.markdown("### Descripción de la investigación")
@@ -43,13 +67,15 @@ def render_investigacion():
     
     # Mantener config en sesión siempre actualizada (se persistirá al cambiar de página)
     st.session_state["investigacion_config"] = {
-        "descripcion": st.session_state.get("investigacion_descripcion", "") or ""
+        "estilo_investigacion": st.session_state.get("investigacion_estilo") or "Entrevista abierta",
+        "descripcion": st.session_state.get("investigacion_descripcion", "") or "",
     }
 
     # Acciones
     st.markdown("---")
-    if st.button("🔄 Resetear", use_container_width=True):
+    if st.button("Resetear", use_container_width=True, key="investigacion_reset"):
         st.session_state.pop("investigacion_descripcion", None)
+        st.session_state.pop("investigacion_estilo", None)
         st.session_state.pop("investigacion_config", None)
         st.session_state.pop("investigacion_config_synced_backend", None)
         st.rerun()

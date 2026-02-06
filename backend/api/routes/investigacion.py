@@ -9,6 +9,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 import time
+import threading
+import uuid
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -22,10 +24,246 @@ from pydantic import ValidationError
 
 router = APIRouter(prefix="/api/investigacion", tags=["investigacion"])
 
+# -------------------------
+# Job runner (cancelable)
+# -------------------------
+
+_JOBS_LOCK = threading.Lock()
+_JOBS: Dict[str, Dict[str, Any]] = {}
+
+
+def _job_get(run_id: str) -> Optional[Dict[str, Any]]:
+    with _JOBS_LOCK:
+        return _JOBS.get(run_id)
+
+
+def _job_put(run_id: str, job: Dict[str, Any]) -> None:
+    with _JOBS_LOCK:
+        _JOBS[run_id] = job
+        # Best-effort cleanup: keep last 20 jobs
+        if len(_JOBS) > 20:
+            # remove oldest by created_at
+            items = sorted(_JOBS.items(), key=lambda kv: kv[1].get("created_at") or "")
+            for rid, _ in items[:-20]:
+                _JOBS.pop(rid, None)
+
+
+def _job_append_event(job: Dict[str, Any], ev: Dict[str, Any]) -> None:
+    if not isinstance(job, dict):
+        return
+    lock = job.get("lock")
+    if not isinstance(lock, threading.Lock):
+        # create if missing
+        lock = threading.Lock()
+        job["lock"] = lock
+    with lock:
+        events = job.get("events")
+        if not isinstance(events, list):
+            events = []
+            job["events"] = events
+        events.append(ev)
+
+
+def _load_latest_configs() -> tuple[UsuarioConfigV2, Dict[str, Any], Dict[str, Any], str]:
+    """
+    Load latest user/product/research configs from storage.
+    Returns: (usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion)
+    """
+    usuarios_dir = STORAGE_DIR / "usuarios"
+    productos_dir = STORAGE_DIR / "productos"
+    investigaciones_dir = STORAGE_DIR / "investigaciones"
+
+    usuario_files = list(usuarios_dir.glob("*_config.json"))
+    if not usuario_files:
+        raise HTTPException(status_code=400, detail="No hay usuario configurado")
+    usuario_file = max(usuario_files, key=lambda p: p.stat().st_mtime)
+    with open(usuario_file, "r", encoding="utf-8") as f:
+        usuario_data = json.load(f)
+    usuario_config_raw = usuario_data.get("config") or {}
+    try:
+        if isinstance(usuario_config_raw, dict) and usuario_config_raw.get("mode") in {"single", "population"}:
+            usuario_cfg_v2 = UsuarioConfigV2.model_validate(usuario_config_raw)
+        else:
+            usuario_cfg_v2 = UsuarioConfigV2.from_legacy(usuario_config_raw if isinstance(usuario_config_raw, dict) else {})
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=f"Config de usuario inválida: {e}")
+
+    producto_files = list(productos_dir.glob("*_config.json"))
+    if not producto_files:
+        raise HTTPException(status_code=400, detail="No hay producto configurado")
+    producto_file = max(producto_files, key=lambda p: p.stat().st_mtime)
+    with open(producto_file, "r", encoding="utf-8") as f:
+        producto_data = json.load(f)
+    producto_config = producto_data.get("config") or {}
+    if "nombre_producto" not in producto_config:
+        producto_config["nombre_producto"] = "Producto"
+    if "descripcion" not in producto_config:
+        producto_config["descripcion"] = ""
+
+    investigacion_files = list(investigaciones_dir.glob("*_config.json"))
+    if not investigacion_files:
+        raise HTTPException(status_code=400, detail="No hay investigación configurada")
+    investigacion_file = max(investigacion_files, key=lambda p: p.stat().st_mtime)
+    with open(investigacion_file, "r", encoding="utf-8") as f:
+        investigacion_data = json.load(f)
+    investigacion_config = investigacion_data.get("config", {}) or {}
+    investigacion_descripcion = investigacion_config.get("descripcion", "")
+    if not isinstance(investigacion_descripcion, str) or not investigacion_descripcion.strip():
+        raise HTTPException(status_code=400, detail="La investigación debe incluir una descripción")
+    estilo = investigacion_config.get("estilo_investigacion") if isinstance(investigacion_config, dict) else None
+    if isinstance(estilo, str) and estilo.strip():
+        investigacion_descripcion = f"Estilo de investigación: {estilo.strip()}\n\n{investigacion_descripcion}"
+
+    return usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion
+
+
+def _build_llm_client(system_config_dict: Dict[str, Any]) -> LLMClient:
+    normalized_provider = _normalize_llm_provider(system_config_dict.get("llm_provider"))
+    llm_config = {
+        "provider": normalized_provider,
+        "temperature": system_config_dict.get("temperatura", 0.7),
+        "max_tokens": system_config_dict.get("max_tokens", 1000),
+    }
+    if normalized_provider == "anythingllm":
+        workspace_slug = system_config_dict.get("anythingllm_workspace_slug")
+        mode = str(system_config_dict.get("anythingllm_mode") or "chat").strip().lower()
+        if mode != "chat":
+            mode = "chat"
+        llm_config.update(
+            {
+                "base_url": system_config_dict.get("anythingllm_base_url"),
+                "api_key": system_config_dict.get("anythingllm_api_key"),
+                "workspace_slug": workspace_slug,
+                "mode": mode,
+            }
+        )
+    return LLMClient(provider="llama", config=llm_config)
+
+
+def _run_job(run_id: str, system_config_dict: Dict[str, Any]) -> None:
+    job = _job_get(run_id)
+    if not job:
+        return
+    cancel_event: threading.Event = job["cancel_event"]
+
+    def cancelled() -> bool:
+        return bool(cancel_event.is_set())
+
+    try:
+        _job_append_event(job, {"event": "start", "message": "Iniciando investigación..."})
+        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion = _load_latest_configs()
+
+        prompt_investigacion = system_config_dict.get("prompt_investigacion")
+        if not prompt_investigacion:
+            _job_append_event(
+                job,
+                {
+                    "event": "error",
+                    "message": "Falta 'prompt_investigacion' en la configuración del sistema. Ve a ⚙️ Configuración y guarda la configuración del sistema.",
+                },
+            )
+            job["status"] = "error"
+            return
+
+        llm_client = _build_llm_client(system_config_dict)
+        _job_append_event(job, {"event": "planning", "message": "Preparando plan..."})
+        plan = build_plan(investigacion_descripcion)
+        respondents = [r.model_dump() for r in usuario_cfg_v2.to_effective_respondents()]
+        _job_append_event(job, {"event": "planning_done", "message": f"Plan listo. Respondientes: {len(respondents)}."})
+
+        engine = MultiResearchEngine(
+            respondents=respondents,
+            producto=producto_config,
+            investigacion_descripcion=investigacion_descripcion,
+            llm_client=llm_client,
+            plan=plan,
+            prompt_perfil=system_config_dict.get("prompt_perfil"),
+            prompt_sintesis=prompt_investigacion,
+        )
+
+        for ev in engine.execute_stream(cancel_check=cancelled):
+            if cancelled():
+                _job_append_event(job, {"event": "cancelled", "message": "Investigación cancelada por el usuario."})
+                job["status"] = "cancelled"
+                return
+            _job_append_event(job, ev if isinstance(ev, dict) else {"event": "progress", "message": str(ev)})
+            if isinstance(ev, dict) and ev.get("event") == "done":
+                job["status"] = "done"
+                job["result"] = ev.get("result")
+                return
+            if isinstance(ev, dict) and ev.get("event") == "cancelled":
+                job["status"] = "cancelled"
+                return
+
+        # If finished without done
+        if job.get("status") not in {"done", "cancelled", "error"}:
+            job["status"] = "done"
+    except HTTPException as e:
+        _job_append_event(job, {"event": "error", "message": str(e.detail)})
+        job["status"] = "error"
+    except Exception as e:
+        _job_append_event(job, {"event": "error", "message": f"Error al ejecutar investigación: {str(e)}"})
+        job["status"] = "error"
+
+
+class JobStartRequest(BaseModel):
+    # Usar anotación como string para evitar NameError por orden de definición
+    system_config: Optional["SystemConfig"] = None
+
+
+@router.post("/job/start")
+def job_start(request: JobStartRequest):
+    system_config_dict = request.system_config.dict() if request.system_config else {}
+    run_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:10]}"
+    job = {
+        "run_id": run_id,
+        "created_at": datetime.now().isoformat(),
+        "status": "running",
+        "events": [],
+        "result": None,
+        "cancel_event": threading.Event(),
+        "lock": threading.Lock(),
+    }
+    _job_put(run_id, job)
+    t = threading.Thread(target=_run_job, args=(run_id, system_config_dict), daemon=True)
+    job["thread"] = t
+    t.start()
+    return {"status": "success", "run_id": run_id}
+
+
+@router.get("/job/{run_id}/events")
+def job_events(run_id: str, cursor: int = 0):
+    job = _job_get(run_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="run_id no encontrado")
+    lock = job.get("lock")
+    if not isinstance(lock, threading.Lock):
+        lock = threading.Lock()
+        job["lock"] = lock
+    with lock:
+        events = job.get("events") if isinstance(job.get("events"), list) else []
+        c = max(0, int(cursor or 0))
+        out = events[c:]
+        new_cursor = len(events)
+        return {"status": "success", "run_id": run_id, "job_status": job.get("status"), "cursor": new_cursor, "events": out}
+
+
+@router.post("/job/{run_id}/cancel")
+def job_cancel(run_id: str):
+    job = _job_get(run_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="run_id no encontrado")
+    cancel_event: threading.Event = job["cancel_event"]
+    cancel_event.set()
+    job["status"] = "cancelled"
+    _job_append_event(job, {"event": "cancel_requested", "message": "Cancelación solicitada."})
+    return {"status": "success", "run_id": run_id, "job_status": job.get("status")}
+
 
 class InvestigacionConfig(BaseModel):
     """Modelo de configuración de investigación"""
     descripcion: str
+    estilo_investigacion: Optional[str] = None
 
 
 class SystemConfig(BaseModel):
@@ -113,77 +351,11 @@ def iniciar_investigacion(request: IniciarInvestigacionRequest):
     4. Retorna resultados
     """
     try:
-        # Cargar configuraciones más recientes
-        usuarios_dir = STORAGE_DIR / "usuarios"
-        productos_dir = STORAGE_DIR / "productos"
-        investigaciones_dir = STORAGE_DIR / "investigaciones"
-        
-        # Cargar usuario
-        usuario_files = list(usuarios_dir.glob("*_config.json"))
-        if not usuario_files:
-            raise HTTPException(status_code=400, detail="No hay usuario configurado")
-        usuario_file = max(usuario_files, key=lambda p: p.stat().st_mtime)
-        with open(usuario_file, "r", encoding="utf-8") as f:
-            usuario_data = json.load(f)
-        usuario_config_raw = usuario_data.get("config") or {}
-        # Aceptar v2 o legacy
-        try:
-            if isinstance(usuario_config_raw, dict) and usuario_config_raw.get("mode") in {"single", "population"}:
-                usuario_cfg_v2 = UsuarioConfigV2.model_validate(usuario_config_raw)
-            else:
-                usuario_cfg_v2 = UsuarioConfigV2.from_legacy(usuario_config_raw if isinstance(usuario_config_raw, dict) else {})
-        except ValidationError as e:
-            raise HTTPException(status_code=400, detail=f"Config de usuario inválida: {e}")
-        
-        # Cargar producto
-        producto_files = list(productos_dir.glob("*_config.json"))
-        if not producto_files:
-            raise HTTPException(status_code=400, detail="No hay producto configurado")
-        producto_file = max(producto_files, key=lambda p: p.stat().st_mtime)
-        with open(producto_file, "r", encoding="utf-8") as f:
-            producto_data = json.load(f)
-        producto_config = producto_data["config"]
-        # Normalizar producto (nuevo esquema solo tiene 'descripcion')
-        if "nombre_producto" not in producto_config:
-            producto_config["nombre_producto"] = "Producto"
-        if "descripcion" not in producto_config:
-            producto_config["descripcion"] = ""
-        
-        # Cargar investigación
-        investigacion_files = list(investigaciones_dir.glob("*_config.json"))
-        if not investigacion_files:
-            raise HTTPException(status_code=400, detail="No hay investigación configurada")
-        investigacion_file = max(investigacion_files, key=lambda p: p.stat().st_mtime)
-        with open(investigacion_file, "r", encoding="utf-8") as f:
-            investigacion_data = json.load(f)
-        investigacion_config = investigacion_data.get("config", {})
-        investigacion_descripcion = investigacion_config.get("descripcion", "")
-        if not isinstance(investigacion_descripcion, str) or not investigacion_descripcion.strip():
-            raise HTTPException(status_code=400, detail="La investigación debe incluir una descripción")
+        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion = _load_latest_configs()
         
         # Configurar LLM client
         system_config_dict = request.system_config.dict() if request.system_config else {}
-        normalized_provider = _normalize_llm_provider(system_config_dict.get("llm_provider"))
-        llm_config = {
-            "provider": normalized_provider,
-            "temperature": system_config_dict.get("temperatura", 0.7),
-            "max_tokens": system_config_dict.get("max_tokens", 1000),
-        }
-        if normalized_provider == "anythingllm":
-            workspace_slug = system_config_dict.get("anythingllm_workspace_slug")
-            # Para este proyecto, usamos AnythingLLM como proxy de LLM.
-            # El modo query tiende a devolver "no relevant information" si no hay chunks,
-            # así que forzamos chat por defecto.
-            mode = str(system_config_dict.get("anythingllm_mode") or "chat").strip().lower()
-            if mode != "chat":
-                mode = "chat"
-            llm_config.update({
-                "base_url": system_config_dict.get("anythingllm_base_url"),
-                "api_key": system_config_dict.get("anythingllm_api_key"),
-                "workspace_slug": workspace_slug,
-                "mode": mode,
-            })
-        llm_client = LLMClient(provider="llama", config=llm_config)
+        llm_client = _build_llm_client(system_config_dict)
         
         # Ejecutar investigación (resultado único)
         prompt_investigacion = system_config_dict.get("prompt_investigacion")
@@ -288,6 +460,9 @@ def iniciar_investigacion_stream(request: IniciarInvestigacionRequest):
             if not isinstance(investigacion_descripcion, str) or not investigacion_descripcion.strip():
                 yield _sse({"event": "error", "message": "La investigación debe incluir una descripción"})
                 return
+            estilo = investigacion_config.get("estilo_investigacion") if isinstance(investigacion_config, dict) else None
+            if isinstance(estilo, str) and estilo.strip():
+                investigacion_descripcion = f"Estilo de investigación: {estilo.strip()}\n\n{investigacion_descripcion}"
 
             # Configurar LLM client
             system_config_dict = request.system_config.dict() if request.system_config else {}

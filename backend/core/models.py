@@ -18,11 +18,28 @@ from pydantic import BaseModel, Field
 # UsuarioConfig (V2)
 # -----------------------
 
+class UsuarioDemografia(BaseModel):
+    """
+    Variabilidad demográfica para la población de respondientes.
+    """
+
+    edad_min: int = Field(default=25, ge=0, le=120)
+    edad_max: int = Field(default=55, ge=0, le=120)
+    # 0.0 => solo mujeres, 1.0 => solo hombres
+    # Compatibilidad: también aceptamos valores legacy tipo "partes" (p.ej. 1,2,3...) y los interpretamos junto a ratio_mujeres si existe.
+    ratio_hombres: float = Field(default=0.5, ge=0.0, le=100.0)
+
+    model_config = {"extra": "allow"}
+
+
 class UsuarioSingle(BaseModel):
     arquetipo: str = Field(default="Personalizado")
     comportamiento: str = Field(default="")
     necesidades: str = Field(default="")
     barreras: str = Field(default="")
+    # Opcional: se puede usar en prompts (p.ej. {edad}, {genero})
+    edad: Optional[int] = None
+    genero: Optional[str] = None
 
 
 class UsuarioPopulationMixEntry(BaseModel):
@@ -43,6 +60,7 @@ class UsuarioPopulationMixEntry(BaseModel):
 class UsuarioPopulation(BaseModel):
     n: int = Field(default=10, ge=1)
     mix: List[UsuarioPopulationMixEntry] = Field(default_factory=list)
+    demografia: Optional[UsuarioDemografia] = None
 
 
 UsuarioMode = Literal["single", "population"]
@@ -93,6 +111,65 @@ class UsuarioConfigV2(BaseModel):
         elif len(respondents) < pop.n:
             missing = pop.n - len(respondents)
             respondents.extend([UsuarioSingle()] * missing)
+
+        # Aplicar variabilidad demográfica (si existe)
+        if isinstance(pop.demografia, UsuarioDemografia):
+            import random
+
+            n = len(respondents)
+            d = pop.demografia
+
+            # Edad
+            lo = int(d.edad_min)
+            hi = int(d.edad_max)
+            if hi < lo:
+                lo, hi = hi, lo
+
+            # Género (ratio 0..1)
+            men_fraction: Optional[float] = None
+            raw = None
+            try:
+                raw = float(getattr(d, "ratio_hombres", 0.5))
+            except Exception:
+                raw = None
+
+            if raw is None:
+                men_fraction = None
+            elif 0.0 <= raw <= 1.0:
+                # Nuevo esquema: fracción
+                men_fraction = raw
+            else:
+                # Legacy: ratio por partes (ej. 1..N). Se interpreta con ratio_mujeres si existe.
+                try:
+                    rh_parts = max(0.0, float(raw))
+                    extra = getattr(d, "model_extra", {}) or {}
+                    rw_parts = float(extra.get("ratio_mujeres") or 0.0)
+                    rw_parts = max(0.0, rw_parts)
+                    total_parts = rw_parts + rh_parts
+                    men_fraction = (rh_parts / total_parts) if total_parts > 0 else None
+                except Exception:
+                    men_fraction = None
+
+            if men_fraction is None:
+                genders = []
+            else:
+                men_fraction = max(0.0, min(1.0, float(men_fraction)))
+                men_target = int(round(n * men_fraction))
+                men_target = max(0, min(men_target, n))
+                women_target = n - men_target
+                genders = (["Hombre"] * men_target) + (["Mujer"] * women_target)
+                random.shuffle(genders)
+
+            for i, r in enumerate(respondents):
+                # Edad aleatoria por respondiente
+                try:
+                    r.edad = random.randint(lo, hi)
+                except Exception:
+                    r.edad = None
+                # Género según lista (si aplica)
+                if genders:
+                    r.genero = genders[i] if i < len(genders) else None
+
         return respondents
 
 

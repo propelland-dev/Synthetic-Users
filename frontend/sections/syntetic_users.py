@@ -20,15 +20,14 @@ def _cargar_arquetipos():
         return []
 
 def render_usuarios_sinteticos():
-    st.markdown('<div class="section-title">👥 Configuración de Usuario Sintético</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title"><span class="material-symbols-outlined">group</span>Configuración de Usuario Sintético</div>', unsafe_allow_html=True)
     
-    st.markdown(r"""
-    Define el usuario sintético a partir de **3 dimensiones**: comportamiento, necesidades y barreras.
-    
-    Puedes trabajar en dos modos:
-    - **Single**: un solo usuario sintético
-    - **Población**: una mezcla de arquetipos con un tamaño total \(N\)
-    """)
+    #st.markdown(r"""
+    #Define el usuario sintético a partir de **3 dimensiones**: comportamiento, necesidades y barreras.
+    #Puedes trabajar en dos modos:
+    #- **Single**: un solo usuario sintético
+    #- **Población**: una mezcla de arquetipos con un tamaño total \(N\)
+    #""")
     
     # Cargar configuración guardada si existe (auto)
     config_cargada = cargar_config("usuario") if existe_config("usuario") else None
@@ -151,7 +150,7 @@ def render_usuarios_sinteticos():
 
         # Acciones
         st.markdown("---")
-        if st.button("🔄 Resetear", use_container_width=True):
+        if st.button("Resetear", use_container_width=True, key="usuarios_reset_single"):
             st.session_state["usuario_config"] = None
             st.session_state.pop("usuario_config_synced_backend", None)
             for k in [
@@ -181,6 +180,48 @@ def render_usuarios_sinteticos():
     st.markdown("### Población")
     n_default = int(pop_saved.get("n", 10)) if isinstance(pop_saved.get("n"), int) else 10
     n = st.number_input("Tamaño de la población (N)", min_value=1, max_value=200, value=n_default, step=1, key="usuario_population_n")
+
+    # Variabilidad demográfica (edad + ratio de género)
+    demo_saved = pop_saved.get("demografia") if isinstance(pop_saved.get("demografia"), dict) else {}
+    if "usuario_demo_enabled" not in st.session_state:
+        st.session_state["usuario_demo_enabled"] = bool(demo_saved)
+    if "usuario_edad_range" not in st.session_state:
+        lo = int(demo_saved.get("edad_min", 25)) if str(demo_saved.get("edad_min", "")).isdigit() else 25
+        hi = int(demo_saved.get("edad_max", 55)) if str(demo_saved.get("edad_max", "")).isdigit() else 55
+        st.session_state["usuario_edad_range"] = (min(lo, hi), max(lo, hi))
+    if "usuario_ratio_hombres" not in st.session_state:
+        # Nuevo: ratio_hombres es fracción 0..1 (0 solo mujeres, 1 solo hombres)
+        try:
+            v = float(demo_saved.get("ratio_hombres", 0.5))
+        except Exception:
+            v = 0.5
+        # Compat legacy: si venía como partes (>1), aproximamos a 0.5 hasta que el usuario lo ajuste
+        if v > 1.0:
+            v = 0.5
+        st.session_state["usuario_ratio_hombres"] = v
+
+    with st.expander("Variabilidad (edad y género)", expanded=False):
+        st.checkbox(
+            "Aplicar variabilidad demográfica a la población",
+            key="usuario_demo_enabled",
+            help="Asignará edad aleatoria dentro del rango y género según el ratio Mujeres:Hombres.",
+        )
+        st.slider(
+            "Rango de edad",
+            min_value=0,
+            max_value=120,
+            value=st.session_state["usuario_edad_range"],
+            step=1,
+            key="usuario_edad_range",
+        )
+        st.slider(
+            "Ratio de hombres (0 → solo mujeres, 1 → solo hombres)",
+            min_value=0.0,
+            max_value=1.0,
+            value=float(st.session_state.get("usuario_ratio_hombres") or 0.5),
+            step=0.1,
+            key="usuario_ratio_hombres",
+        )
 
     if "usuario_population_rows" not in st.session_state:
         # Normalizar filas guardadas
@@ -291,14 +332,35 @@ def render_usuarios_sinteticos():
             "necesidades": r.get("necesidades", ""),
             "barreras": r.get("barreras", ""),
         })
+    demografia = None
+    if st.session_state.get("usuario_demo_enabled"):
+        lo, hi = st.session_state.get("usuario_edad_range", (25, 55))
+        try:
+            lo_i = int(lo)
+            hi_i = int(hi)
+        except Exception:
+            lo_i, hi_i = 25, 55
+        if hi_i < lo_i:
+            lo_i, hi_i = hi_i, lo_i
+        try:
+            rh = float(st.session_state.get("usuario_ratio_hombres") or 0.5)
+        except Exception:
+            rh = 0.5
+        rh = max(0.0, min(1.0, rh))
+        demografia = {
+            "edad_min": lo_i,
+            "edad_max": hi_i,
+            "ratio_hombres": rh,
+        }
+
     st.session_state["usuario_config"] = {
         "mode": "population",
-        "population": {"n": int(n), "mix": mix_out},
+        "population": {"n": int(n), "mix": mix_out, "demografia": demografia},
     }
 
     # Acciones
     st.markdown("---")
-    if st.button("🔄 Resetear", use_container_width=True):
+    if st.button("Resetear", use_container_width=True, key="usuarios_reset_population"):
         st.session_state["usuario_config"] = None
         st.session_state.pop("usuario_config_synced_backend", None)
         for k in [
@@ -306,6 +368,9 @@ def render_usuarios_sinteticos():
             "usuario_mode_radio",
             "usuario_population_n",
             "usuario_population_rows",
+            "usuario_demo_enabled",
+            "usuario_edad_range",
+            "usuario_ratio_hombres",
         ]:
             st.session_state.pop(k, None)
         st.rerun()

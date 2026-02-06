@@ -49,10 +49,10 @@ def _hash_fields(fields: dict) -> str:
 
 
 def render_producto():
-    st.markdown('<div class="section-title">📦 Configuración del Producto</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title"><span class="material-symbols-outlined">inventory_2</span>Configuración del Producto</div>', unsafe_allow_html=True)
     
     st.markdown("""
-    Describe el producto/servicio o experiencia que quieres evaluar. Puede ser **cualquier cosa** (no solo chatbots).
+    Describe el producto/servicio o experiencia que quieres evaluar.
     """)
     
     # Cargar configuración guardada si existe (campos + ficha)
@@ -78,7 +78,7 @@ def render_producto():
 
     # Campos comunes (guiados)
     st.markdown("### Parámetros (guiados)")
-    st.caption("Puedes rellenar solo la descripción si lo prefieres; la ficha se generará igualmente.")
+    #st.caption("Puedes rellenar solo la descripción si lo prefieres; la ficha se generará igualmente.")
 
     if "producto_nombre" not in st.session_state:
         st.session_state["producto_nombre"] = config_cargada.get("nombre_producto", "") or ""
@@ -103,15 +103,22 @@ def render_producto():
         st.session_state["producto_riesgos"] = config_cargada.get("riesgos", "") or ""
     if "producto_dependencias" not in st.session_state:
         st.session_state["producto_dependencias"] = config_cargada.get("dependencias", "") or ""
+    # Mantener session_state alineado con el archivo de ficha:
+    # - si no existe en sesión, cargar
+    # - si existe vacío pero el archivo tiene ficha, cargar
+    ficha_archivo = str(ficha_cargada.get("ficha_producto") or "")
     if "producto_ficha" not in st.session_state:
-        st.session_state["producto_ficha"] = ficha_cargada.get("ficha_producto", "") or ""
+        st.session_state["producto_ficha"] = ficha_archivo
+    else:
+        if (not str(st.session_state.get("producto_ficha") or "").strip()) and ficha_archivo.strip():
+            st.session_state["producto_ficha"] = ficha_archivo
 
     col_a, col_b = st.columns([2, 3])
     with col_a:
         st.text_input("Nombre", key="producto_nombre", placeholder="Ej.: Moeve Assistant")
     with col_b:
         st.text_area(
-            "Descripción (input libre)",
+            "Descripción",
             key="producto_descripcion_input",
             height=110,
             placeholder="Describe el producto con el detalle que tengas disponible (puede ser lo único que rellenes).",
@@ -156,7 +163,7 @@ def render_producto():
             disabled=not is_existente,
         )
 
-        st.caption("Nota: por ahora guardamos solo metadatos (nombre/tamaño). La ingesta real se implementa después.")
+        #st.caption("Nota: por ahora guardamos solo metadatos (nombre/tamaño). La ingesta real se implementa después.")
 
         def _uploader(label: str, key: str, type_):
             # Compatibilidad: `disabled` está en streamlit moderno; si no, evitamos romper
@@ -193,7 +200,7 @@ def render_producto():
             documentos_meta = _meta(docs)
             fotos_meta = _meta(pics)
 
-    # Indicador: ficha desactualizada
+    # Indicador: ficha desactualizada (mostrar SIEMPRE que haya ficha)
     current_fields = _fields_snapshot(
         producto_tipo=producto_tipo,
         nombre_producto=st.session_state.get("producto_nombre") or "",
@@ -215,6 +222,8 @@ def render_producto():
     generated_at = ficha_cargada.get("generated_at")
 
     if ficha_text:
+        # Mostrar el estado cerca y claro
+        st.markdown("### Estado de la ficha")
         if last_hash and last_hash != current_hash:
             st.warning("🟠 Ficha desactualizada. Has cambiado campos desde la última generación.")
         elif not last_hash:
@@ -228,7 +237,7 @@ def render_producto():
     st.markdown("---")
     col_gen, col_info = st.columns([1, 2])
     with col_gen:
-        clicked = st.button("🧾 Generar/Actualizar ficha", use_container_width=True)
+        clicked = st.button("Generar/Actualizar ficha", use_container_width=True, key="producto_generar_ficha")
     with col_info:
         st.caption("La ficha se usará como contexto del producto en la investigación.")
 
@@ -239,7 +248,7 @@ def render_producto():
         if not isinstance(system_cfg, dict):
             system_cfg = {}
         if not system_cfg.get("prompt_ficha_producto"):
-            st.error("Falta `prompt_ficha_producto`. Ve a ⚙️ Configuración y guarda la configuración del sistema.")
+            st.error("Falta `prompt_ficha_producto`. Ve a Configuración y guarda la configuración del sistema.")
         else:
             producto_cfg_for_llm = {
                 "producto_tipo": producto_tipo,
@@ -302,7 +311,7 @@ def render_producto():
     # Limpiar Nones para no ensuciar JSON
     st.session_state["producto_config"] = {k: v for k, v in st.session_state["producto_config"].items() if v is not None}
 
-    with st.expander("Vista previa (contexto que se usará en la investigación)", expanded=False):
+    with st.expander("Vista previa de la ficha", expanded=False):
         st.markdown(st.session_state["producto_config"].get("descripcion") or "_(vacío)_")
     
     # Acciones
@@ -355,7 +364,7 @@ def render_producto():
                 st.session_state.pop(k, None)
             st.rerun()
 
-    if st.button("🔄 Resetear", use_container_width=True):
+    if st.button("Resetear", use_container_width=True, key="producto_reset"):
         for k in [
             "producto_tipo",
             "producto_tipo_radio",
