@@ -41,6 +41,7 @@ st.set_page_config(
 # Estilos (CSS global)
 inject_css("assets/moeve.css")
 
+
 # Helpers para query params (mantener compatibilidad)
 def _get_query_params():
     try:
@@ -456,7 +457,7 @@ _nav_button("Usuario sintético", "usuarios", current_section)
 # Resultados
 _nav_button("Resultados", "resultados", current_section)
 
-# Separador visual
+# Separador visual antes de iniciar investigación
 st.sidebar.markdown('<div class="nav-separator"></div>', unsafe_allow_html=True)
 
 # Iniciar investigación
@@ -504,24 +505,6 @@ else:
 # ============================================
 # HEADER - DISEÑO 02
 # ============================================
-st.markdown("""
-<div class="moeve-header">
-    <div class="moeve-header-logo">
-        <!-- Logo SVG placeholder - replace with actual moeve logo -->
-        <svg viewBox="0 0 100 40" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="10" width="30" height="20" rx="4" fill="#004656"/>
-            <text x="8" y="25" font-family="Arial, sans-serif" font-size="12" fill="white" font-weight="bold">moeve</text>
-        </svg>
-    </div>
-    <div class="moeve-header-user">
-        <div class="moeve-header-user-info">
-            <div class="moeve-header-user-name">Nombre Apellido</div>
-            <div class="moeve-header-user-role">Investigador</div>
-        </div>
-        <div class="moeve-header-avatar">NA</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
 
 # ============================================
 # RENDERIZAR SECCIÓN SELECCIONADA
