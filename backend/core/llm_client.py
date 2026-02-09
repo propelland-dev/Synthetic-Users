@@ -52,13 +52,9 @@ class LLMClient:
             model_config = self.config.get("model", LLAMA_CONFIG["model"])
             self.min_delay_ms = int(self.config.get("min_delay_ms") or 0)
             
-            # Intentar detectar modelo disponible si el configurado no está disponible
-            try:
-                available_model = self._get_available_model(model_config)
-                self.model = available_model
-            except:
-                # Si falla la detección, usar el configurado
-                self.model = model_config
+            # Solo intentamos detectar el modelo si no estamos en una operación de solo verificación
+            # Para evitar llamadas dobles y timeouts innecesarios
+            self.model = model_config
         elif llama_provider == "anythingllm":
             self.base_url = (self.config.get("base_url") or ANYTHINGLLM_CONFIG["base_url"]).strip()
             self.api_key = (self.config.get("api_key") or ANYTHINGLLM_CONFIG.get("api_key", "") or "").strip()

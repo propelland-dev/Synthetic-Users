@@ -26,7 +26,7 @@ STORAGE_DIR = BASE_DIR / "storage"
 LLAMA_CONFIG = {
     "provider": os.getenv("LLAMA_PROVIDER", "ollama"),  # "ollama" o "llama-cpp-python"
     "model": os.getenv("LLAMA_MODEL", "llama3.2:latest"),  # Nombre del modelo en Ollama
-    "base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+    "base_url": os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
     "temperature": float(os.getenv("LLAMA_TEMPERATURE", "0.7")),
     "max_tokens": int(os.getenv("LLAMA_MAX_TOKENS", "1000")),
 }

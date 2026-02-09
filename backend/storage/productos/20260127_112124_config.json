@@ -1,8 +1,0 @@
-{
-  "config": {
-    "nombre_producto": "Recipbot",
-    "tipo_producto": "Chatbot Web",
-    "descripcion": "Es un chatbot de recetas en que le dices que te gustaria comer, tu estilo y tus preferencias, y te ayuda a escoger la receta mas adecuada, te explica los ingredientes y te muestra como hacerlo"
-  },
-  "timestamp": "2026-01-27T11:21:24.892977"
-}

@@ -7,7 +7,7 @@ import json
 from typing import Dict, Any, Optional
 
 # URL base de la API
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 
 # Endpoints de la API
 API_ENDPOINTS = {
@@ -229,21 +229,24 @@ def listar_resultados() -> Optional[Dict[str, Any]]:
 def verificar_ollama() -> Optional[Dict[str, Any]]:
     """Verifica el estado de la conexión con Ollama"""
     try:
-        # Puede tardar un poco si Ollama está lento (timeout del backend + red)
-        response = requests.get(f"{API_BASE_URL}/api/llm/status", timeout=12)
-        response.raise_for_status()
+        # Aumentamos el timeout a 20s para dar margen al backend (que tiene 5s internos)
+        response = requests.get(f"{API_BASE_URL}/api/llm/status", timeout=20)
+        if response.status_code >= 400:
+            return {"status": "error", "message": f"Error del backend ({response.status_code}): {response.text}"}
         return response.json()
     except Exception as e:
         print(f"Error al verificar Ollama: {e}")
-        return None
+        return {"status": "error", "message": f"Backend no accesible: {str(e)}"}
 
 
 def verificar_llm(system_config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Verifica el estado del proveedor LLM seleccionado (Ollama o AnythingLLM)."""
     try:
-        response = requests.post(f"{API_BASE_URL}/api/llm/status", json=system_config, timeout=12)
-        response.raise_for_status()
+        # Aumentamos el timeout a 20s
+        response = requests.post(f"{API_BASE_URL}/api/llm/status", json=system_config, timeout=20)
+        if response.status_code >= 400:
+            return {"status": "error", "message": f"Error del backend ({response.status_code}): {response.text}"}
         return response.json()
     except Exception as e:
         print(f"Error al verificar LLM: {e}")
-        return None
+        return {"status": "error", "message": f"Backend no accesible: {str(e)}"}

@@ -20,16 +20,16 @@ def inject_css(relative_path: str) -> None:
     st.markdown(f"<style data-timestamp='{timestamp}'>\n{css}\n</style>", unsafe_allow_html=True)
 
 
-def render_moeve_header() -> None:
-    """
-    Renderiza el header principal de Moeve según el diseño Figma.
-    """
-    st.markdown("""
-    <div class="moeve-main-header">
-        <div class="moeve-brand">
-            <h1>moeve</h1>
-            <p class="subtitle">Sistema de usuarios sintéticos</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+# def render_moeve_header() -> None:
+#     """
+#     Renderiza el header principal de Moeve según el diseño Figma.
+#     """
+#     st.markdown("""
+#     <div class="moeve-main-header">
+#         <div class="moeve-brand">
+#             <h1>moeve</h1>
+#             <p class="subtitle">Sistema de usuarios sintéticos</p>
+#         </div>
+#     </div>
+#     """, unsafe_allow_html=True)
 

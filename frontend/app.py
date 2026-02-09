@@ -373,7 +373,7 @@ def _render_job_progress(run_slot):
 
     prog = _progress_for(progress_step, progress_total)
 
-    cls = "run-panel is-running" if job_status == "running" else "run-panel"
+    cls = f"run-panel is-{job_status}"
     bar_html = "<div class='run-bar'><div class='run-bar-fill' style='width:0%'></div></div>"
     if prog is not None:
         bar_html = "<div class='run-bar'>" + f"<div class='run-bar-fill' style='width:{prog*100:.1f}%'></div>" + "</div>"
@@ -460,13 +460,11 @@ _nav_button("Resultados", "resultados", current_section)
 # Separador visual antes de iniciar investigación
 st.sidebar.markdown('<div class="nav-separator"></div>', unsafe_allow_html=True)
 
-# Iniciar investigación
+# Iniciar / Cancelar investigación
 is_running = bool(st.session_state.get("investigacion_run_id"))
-if not is_running:
-    if st.sidebar.button("Iniciar investigación", use_container_width=True, key="btn_run"):
-        _run_investigacion_from_sidebar(current_section, st.sidebar.empty())
-else:
-    if st.sidebar.button("Cancelar investigación", use_container_width=True, key="btn_cancel"):
+
+if is_running:
+    if st.sidebar.button("Cancelar investigación", use_container_width=True, key="btn_cancel", type="primary"):
         rid = str(st.session_state.get("investigacion_run_id") or "")
         if rid:
             cancelar_investigacion_job(rid)
@@ -474,6 +472,9 @@ else:
         st.session_state.pop("investigacion_job_cursor", None)
         st.sidebar.error("Investigación cancelada.")
         st.rerun()
+else:
+    if st.sidebar.button("Iniciar investigación", use_container_width=True, key="btn_run"):
+        _run_investigacion_from_sidebar(current_section, st.sidebar.empty())
 
 # Separador visual antes de Configuración
 st.sidebar.markdown('<div class="nav-separator"></div>', unsafe_allow_html=True)
@@ -492,19 +493,21 @@ if st.session_state.get("investigacion_run_id"):
     if still_running:
         time.sleep(1.0)
         st.rerun()
-else:
-    # Reservar espacio para que no salte el layout
-    st.sidebar.markdown(
-        "<div class='run-panel is-idle'>"
-        "<div class='run-line'>&nbsp;</div>"
-        "<div class='run-bar'><div class='run-bar-fill' style='width:0%'></div></div>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
 
 # ============================================
 # HEADER - DISEÑO 02
 # ============================================
+
+# ============================================
+# HEADER DEL CONTENIDO PRINCIPAL
+# ============================================
+
+# st.markdown("""
+# <div class="content-header">
+#     <h1>moeve</h1>
+#     <p class="subtitle">Sistema de usuarios sintéticos</p>
+# </div>
+# """, unsafe_allow_html=True)
 
 # ============================================
 # RENDERIZAR SECCIÓN SELECCIONADA
@@ -530,41 +533,44 @@ st.sidebar.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-backend_status, llm_status = _get_statuses()
-backend_ok = backend_status.get("status") == "connected"
-llm_ok = llm_status.get("status") == "connected"
-llm_model = (
-    llm_status.get("model")
-    or llm_status.get("provider")
-    or llm_status.get("base_url")
-    or "N/A"
-)
 
-backend_state = "ON" if backend_ok else "OFF"
+# Comentamos el check de estados porque es lento y bloquea la navegación.
+# Si se desea recuperar, se recomienda hacerlo de forma asíncrona o con caché mayor.
+# backend_status, llm_status = _get_statuses()
+# backend_ok = backend_status.get("status") == "connected"
+# llm_ok = llm_status.get("status") == "connected"
+# llm_model = (
+#     llm_status.get("model")
+#     or llm_status.get("provider")
+#     or llm_status.get("base_url")
+#     or "N/A"
+# )
+#
+# backend_state = "ON" if backend_ok else "OFF"
+#
+# llm_state = "ON" if llm_ok else "OFF"
+#
+# backend_pill_bg = "rgba(46, 204, 113, 0.18)" if backend_ok else "rgba(231, 76, 60, 0.16)"
+# backend_pill_border = "rgba(46, 204, 113, 0.35)" if backend_ok else "rgba(231, 76, 60, 0.32)"
+# backend_pill_text = "rgba(22, 110, 62, 0.95)" if backend_ok else "rgba(140, 32, 24, 0.95)"
+#
+# llm_pill_bg = "rgba(46, 204, 113, 0.18)" if llm_ok else "rgba(231, 76, 60, 0.16)"
+# llm_pill_border = "rgba(46, 204, 113, 0.35)" if llm_ok else "rgba(231, 76, 60, 0.32)"
+# llm_pill_text = "rgba(22, 110, 62, 0.95)" if llm_ok else "rgba(140, 32, 24, 0.95)"
 
-llm_state = "ON" if llm_ok else "OFF"
+# st.sidebar.markdown(
+#     f"""
+#     <div class="sidebar-status">
+#       <div style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;padding:0.65rem 0.75rem;margin:0.35rem 0;border-radius:12px;background:rgba(52, 152, 219, 0.08);border:1px solid rgba(52, 152, 219, 0.18);color:rgba(30,30,30,0.92);">
+#         <span style="font-size:0.95rem;font-weight:600;white-space:nowrap;color:rgba(30,30,30,0.92);">Backend</span>
+#         <span style="display:inline-flex;align-items:center;justify-content:center;padding:0.22rem 0.55rem;border-radius:999px;font-size:0.78rem;font-weight:700;letter-spacing:0.02em;white-space:nowrap;background:{backend_pill_bg};border:1px solid {backend_pill_border};color:{backend_pill_text};">{backend_state}</span>
+#       </div>
 
-backend_pill_bg = "rgba(46, 204, 113, 0.18)" if backend_ok else "rgba(231, 76, 60, 0.16)"
-backend_pill_border = "rgba(46, 204, 113, 0.35)" if backend_ok else "rgba(231, 76, 60, 0.32)"
-backend_pill_text = "rgba(22, 110, 62, 0.95)" if backend_ok else "rgba(140, 32, 24, 0.95)"
-
-llm_pill_bg = "rgba(46, 204, 113, 0.18)" if llm_ok else "rgba(231, 76, 60, 0.16)"
-llm_pill_border = "rgba(46, 204, 113, 0.35)" if llm_ok else "rgba(231, 76, 60, 0.32)"
-llm_pill_text = "rgba(22, 110, 62, 0.95)" if llm_ok else "rgba(140, 32, 24, 0.95)"
-
-st.sidebar.markdown(
-    f"""
-    <div class="sidebar-status">
-      <div style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;padding:0.65rem 0.75rem;margin:0.35rem 0;border-radius:12px;background:rgba(52, 152, 219, 0.08);border:1px solid rgba(52, 152, 219, 0.18);color:rgba(30,30,30,0.92);">
-        <span style="font-size:0.95rem;font-weight:600;white-space:nowrap;color:rgba(30,30,30,0.92);">Backend</span>
-        <span style="display:inline-flex;align-items:center;justify-content:center;padding:0.22rem 0.55rem;border-radius:999px;font-size:0.78rem;font-weight:700;letter-spacing:0.02em;white-space:nowrap;background:{backend_pill_bg};border:1px solid {backend_pill_border};color:{backend_pill_text};">{backend_state}</span>
-      </div>
-
-      <div title="{llm_model}" style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;padding:0.65rem 0.75rem;margin:0.35rem 0;border-radius:12px;background:rgba(52, 152, 219, 0.08);border:1px solid rgba(52, 152, 219, 0.18);color:rgba(30,30,30,0.92);">
-        <span style="font-size:0.95rem;font-weight:600;white-space:nowrap;color:rgba(30,30,30,0.92);">Modelo LLM</span>
-        <span style="display:inline-flex;align-items:center;justify-content:center;padding:0.22rem 0.55rem;border-radius:999px;font-size:0.78rem;font-weight:700;letter-spacing:0.02em;white-space:nowrap;background:{llm_pill_bg};border:1px solid {llm_pill_border};color:{llm_pill_text};">{llm_state}</span>
-      </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+#       <div title="{llm_model}" style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;padding:0.65rem 0.75rem;margin:0.35rem 0;border-radius:12px;background:rgba(52, 152, 219, 0.08);border:1px solid rgba(52, 152, 219, 0.18);color:rgba(30,30,30,0.92);">
+#         <span style="font-size:0.95rem;font-weight:600;white-space:nowrap;color:rgba(30,30,30,0.92);">Modelo LLM</span>
+#         <span style="display:inline-flex;align-items:center;justify-content:center;padding:0.22rem 0.55rem;border-radius:999px;font-size:0.78rem;font-weight:700;letter-spacing:0.02em;white-space:nowrap;background:{llm_pill_bg};border:1px solid {llm_pill_border};color:{llm_pill_text};">{llm_state}</span>
+#       </div>
+#     </div>
+#     """,
+#     unsafe_allow_html=True
+# )

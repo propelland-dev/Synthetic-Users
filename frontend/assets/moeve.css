@@ -10,8 +10,8 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200");
 
-/* Fuentes Moeve */
-@font-face {
+/* Fuentes Moeve - Fallback a fuentes del sistema mientras se obtienen los archivos */
+/* @font-face {
   font-family: "Moeve Sans";
   src: url("../static/MoeveSans-Light.otf") format("opentype");
   font-weight: 300;
@@ -33,7 +33,7 @@
   font-weight: 700;
   font-style: normal;
   font-display: swap;
-}
+} */
 
 /* ============================================
    2. VARIABLES CSS - DISEÑO FIGMA
@@ -62,13 +62,17 @@
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
   
-  /* Tipografía */
-  --font-family: "Moeve Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-size-sm: 0.75rem;
+  /* Tipografía - jerarquía mejorada */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8rem;
   --font-size-base: 0.875rem;
+  --font-size-md: 0.95rem;
   --font-size-lg: 1rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
+  --font-size-xl: 1.125rem;
+  --font-size-2xl: 1.25rem;
+  --font-size-3xl: 1.5rem;
+  --font-size-4xl: 2.25rem;
 }
 
 /* ============================================
@@ -107,14 +111,28 @@ footer,
    4. BASE - HTML Y BODY
    ============================================ */
 
-html, body {
+/* Aplicar fuente Moeve Sans (o fallback) solo a elementos de texto */
+html, body, .stApp {
   font-family: var(--font-family);
   color: var(--moeve-text);
   background-color: var(--moeve-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  margin: 0;
-  padding: 0;
+}
+
+/* Aplicar a elementos de contenido de forma específica sin romper iconos de Streamlit */
+.main p, .main span, .main label, .main li, .main h1, .main h2, .main h3, .main h4, .main h5, .main h6,
+div[data-testid="stSidebar"] p, div[data-testid="stSidebar"] span, div[data-testid="stSidebar"] label {
+  font-family: var(--font-family) !important;
+}
+
+/* Excepción para iconos que SÍ queremos controlar nosotros */
+.section-title, 
+.section-title *,
+.material-symbols-outlined,
+span.material-symbols-outlined,
+[data-testid="stSidebar"] button::before {
+  font-family: "Material Symbols Outlined" !important;
 }
 
 /* ============================================
@@ -134,10 +152,10 @@ html, body {
   padding: var(--spacing-md);
 }
 
-/* Contenido principal */
+/* Contenido principal - estilo panel izquierdo Figma */
 section.main {
   background: var(--moeve-white) !important;
-  padding: var(--spacing-xl) !important;
+  padding: 2.5rem 3rem !important;
   margin: 0 !important;
   min-height: 100vh;
 }
@@ -151,11 +169,13 @@ section.main {
    6. NAVEGACIÓN - ESTILO FIGMA
    ============================================ */
 
-/* Botones de navegación */
-[data-testid="stSidebar"] button {
-  width: 100% !important;
-  padding: 0.75rem 1rem 0.75rem 2.5rem !important;
-  margin: 0.05rem 0 !important;
+/* Botones de navegación - Light weight */
+[data-testid="stSidebar"] button,
+[data-testid="stSidebar"] button p,
+[data-testid="stSidebar"] button div {
+  width: calc(100% - 1rem) !important;
+  padding: 0.75rem 1rem 0.75rem 2.75rem !important;
+  margin: 0.125rem 0.5rem !important;
   background: transparent !important;
   color: var(--moeve-primary) !important;
   font-size: var(--font-size-base) !important;
@@ -170,6 +190,16 @@ section.main {
   justify-content: flex-start !important;
 }
 
+/* Asegurar que el texto dentro de los botones también use light */
+[data-testid="stSidebar"] button p,
+[data-testid="stSidebar"] button div {
+  font-weight: 300 !important;
+  font-family: var(--font-family) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+}
+
 /* Estados hover */
 [data-testid="stSidebar"] button:hover {
   background: var(--moeve-primary-light) !important;
@@ -181,22 +211,31 @@ section.main {
   color: var(--moeve-white) !important;
 }
 
+/* Asegurar que el texto dentro del botón activo también sea blanco */
+[data-testid="stSidebar"] button[kind="primary"] p,
+[data-testid="stSidebar"] button[kind="primary"] div {
+  color: var(--moeve-white) !important;
+}
+
 /* Iconos de navegación */
 [data-testid="stSidebar"] button::before {
   font-family: "Material Symbols Outlined" !important;
   font-size: 1.125rem !important;
   position: absolute !important;
-  left: 0.75rem !important;
+  left: 1rem !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   color: var(--moeve-primary) !important;
   font-variation-settings: "FILL" 0, "wght" 400 !important;
+  font-weight: normal !important;
+  font-style: normal !important;
 }
 
 /* Iconos para botón activo */
 [data-testid="stSidebar"] button[kind="primary"]::before {
   color: var(--moeve-white) !important;
   font-variation-settings: "FILL" 1, "wght" 500 !important;
+  font-family: "Material Symbols Outlined" !important;
 }
 
 /* Iconos específicos por sección */
@@ -208,12 +247,101 @@ section.main {
 .st-key-btn_run button::before { content: "rocket_launch"; }
 .st-key-btn_cancel button::before { content: "cancel"; }
 
+/* Botón de cancelar - Rojo Error/Alert */
+.st-key-btn_cancel button[kind="primary"] {
+    background-color: var(--moeve-error) !important;
+    border-color: var(--moeve-error) !important;
+    color: white !important;
+}
+
+.st-key-btn_cancel button[kind="primary"]:hover {
+    background-color: #dc2626 !important;
+    border-color: #dc2626 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25) !important;
+}
+
+/* Panel de Logs / Progreso - Estilo Warning */
+.run-panel {
+    margin: 1rem 0.5rem !important;
+    padding: 0.85rem !important;
+    background-color: #fffbe6 !important; /* Amarillo muy suave tipo warning */
+    border: 1px solid #ffe58f !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+}
+
+.run-line {
+    font-size: 0.8rem !important;
+    color: #856404 !important;
+    font-weight: 500 !important;
+    margin-bottom: 0.75rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    line-height: 1.2 !important;
+}
+
+.run-line::before {
+    content: "info";
+    font-family: "Material Symbols Outlined" !important;
+    font-size: 1.1rem !important;
+    font-variation-settings: "FILL" 1, "wght" 400 !important;
+}
+
+.is-running .run-line::before {
+    content: "hourglass_top";
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.run-bar {
+    height: 6px !important;
+    background: rgba(133, 100, 4, 0.1) !important;
+    border-radius: 3px !important;
+    overflow: hidden !important;
+}
+
+.run-bar-fill {
+    height: 100% !important;
+    background: #fadb14 !important;
+    transition: width 0.4s ease !important;
+}
+
+.is-idle {
+    background: transparent !important;
+    border: 1px dashed var(--moeve-border) !important;
+    opacity: 0.5 !important;
+}
+.is-idle .run-line { color: var(--moeve-text-light) !important; }
+.is-idle .run-line::before { content: "pause_circle"; }
+
+.is-error {
+    background-color: #fff2f0 !important;
+    border-color: #ffccc7 !important;
+}
+.is-error .run-line { color: #cf1322 !important; }
+.is-error .run-line::before { content: "error"; }
+.is-error .run-bar-fill { background: #ff4d4f !important; }
+
+.is-done {
+    background-color: #f6ffed !important;
+    border-color: #b7eb8f !important;
+}
+.is-done .run-line { color: #389e0d !important; }
+.is-done .run-line::before { content: "check_circle"; }
+.is-done .run-bar-fill { background: #52c41a !important; }
+
 /* Separadores de navegación */
 .nav-separator {
   height: 1px;
   background: var(--moeve-border);
-  margin: 0.125rem 0 !important;
-  width: 100%;
+  margin: 0.125rem 0.5rem !important;
+  width: calc(100% - 1rem);
 }
 
 /* Forzar espaciado simétrico en contenedores de separadores */
@@ -231,6 +359,317 @@ section.main {
 [data-testid="stSidebar"] .stMarkdown:has(.nav-separator) p {
   margin: 0 !important;
   padding: 0 !important;
+}
+
+/* ============================================
+   7. HEADER DEL CONTENIDO - PANEL IZQUIERDO FIGMA
+   ============================================ */
+
+/* Header principal del contenido */
+.content-header {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--moeve-border);
+}
+
+.content-header h1 {
+  font-size: 2.5rem !important;
+  font-weight: 700 !important;
+  color: var(--moeve-primary) !important;
+  margin: 0 0 0.5rem 0 !important;
+  line-height: 1.1 !important;
+}
+
+.content-header .subtitle {
+  font-size: 1rem !important;
+  font-weight: 300 !important;
+  color: var(--moeve-text-light) !important;
+  margin: 0 !important;
+}
+
+/* ============================================
+   8. CONTENIDO DE PÁGINAS - ESTILO FIGMA
+   ============================================ */
+
+/* Título principal de página (H1) - Nivel 1 Bold */
+.main h1,
+.main .stMarkdown h1 {
+  font-size: 2.25rem !important;
+  font-weight: 700 !important;
+  color: var(--moeve-primary) !important;
+  margin: 0 0 0.75rem 0 !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.025em !important;
+}
+
+/* Subtítulos principales (H2) - Nivel 2 Bold */
+.main h2,
+.main .stMarkdown h2 {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: var(--moeve-text) !important;
+  margin: 3rem 0 1.25rem 0 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.015em !important;
+}
+
+/* Subtítulos secundarios (H3) - Nivel 3 Regular */
+.main h3,
+.main .stMarkdown h3 {
+  font-size: 1.125rem !important;
+  font-weight: 400 !important;
+  color: var(--moeve-text) !important;
+  margin: 2.5rem 0 1rem 0 !important;
+  line-height: 1.35 !important;
+}
+
+/* Títulos menores (H4) - Nivel 4 Light */
+.main h4,
+.main .stMarkdown h4 {
+  font-size: 1rem !important;
+  font-weight: 300 !important;
+  color: var(--moeve-text-light) !important;
+  margin: 1.5rem 0 0.75rem 0 !important;
+  line-height: 1.4 !important;
+}
+
+/* Títulos más pequeños (H5) - Nivel 5 Light */
+.main h5,
+.main .stMarkdown h5 {
+  font-size: 0.875rem !important;
+  font-weight: 300 !important;
+  color: var(--moeve-text-light) !important;
+  margin: 1rem 0 0.5rem 0 !important;
+  line-height: 1.4 !important;
+}
+
+/* Párrafos y texto general - Texto primario Regular */
+.main p,
+.main .stMarkdown p {
+  font-size: 0.95rem !important;
+  font-weight: 400 !important;
+  color: var(--moeve-text) !important;
+  line-height: 1.6 !important;
+  margin: 0 0 1.25rem 0 !important;
+}
+
+/* Texto descriptivo - Texto secundario Light */
+.main .stMarkdown p:has(+ div),
+.main p.description,
+.main .stCaption {
+  font-size: 0.875rem !important;
+  font-weight: 300 !important;
+  color: var(--moeve-text-light) !important;
+  margin: 0 0 2rem 0 !important;
+  line-height: 1.5 !important;
+}
+
+/* ============================================
+   8. TÍTULOS DE SECCIÓN CON ICONOS
+   ============================================ */
+
+/* Título de sección principal con icono - Bold */
+.section-title,
+div.section-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  font-family: var(--font-family) !important;
+  color: var(--moeve-primary) !important;
+  margin: 0 0 1rem 0 !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.section-title .material-symbols-outlined,
+div.section-title .material-symbols-outlined {
+  font-size: 2.25rem !important;
+  color: var(--moeve-primary) !important;
+  font-variation-settings: "FILL" 1, "wght" 600 !important;
+}
+
+/* ============================================
+   9. ELEMENTOS DE FORMULARIO - ESTILO FIGMA
+   ============================================ */
+
+/* Labels de formulario - Estilo Figma */
+.main label,
+.main .stMarkdown label,
+div[data-testid="stTextInput"] label,
+div[data-testid="stTextArea"] label,
+div[data-testid="stSelectbox"] label,
+div[data-testid="stRadio"] label,
+[data-testid="stWidgetLabel"] p {
+  font-size: 0.95rem !important;
+  font-weight: 400 !important; /* Regular para el título del campo */
+  color: var(--moeve-text) !important;
+  margin-bottom: 0.5rem !important;
+  display: block !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Radio buttons - Alineación y Estilo Figma */
+div[data-testid="stRadio"] [role="radiogroup"] {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 1.5rem !important;
+  align-items: center !important;
+  padding: 0.5rem 0 !important;
+}
+
+div[data-testid="stRadio"] label {
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 0 !important;
+  gap: 0.5rem !important;
+  cursor: pointer !important;
+}
+
+/* Estilo del texto de las opciones del Radio - Más grande y Light */
+div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+  font-size: 1rem !important;
+  font-weight: 300 !important; /* Light weight */
+  color: var(--moeve-text) !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* Alinear el círculo del radio (el div que contiene el input) */
+div[data-testid="stRadio"] label > div:first-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-top: 0 !important;
+}
+
+/* Estados focus de inputs */
+.main input:focus,
+.main textarea:focus,
+div[data-testid="stTextInput"] input:focus,
+div[data-testid="stTextArea"] textarea:focus,
+div[data-testid="stNumberInput"] input:focus {
+  outline: none !important;
+  border-color: var(--moeve-primary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 70, 86, 0.1) !important;
+}
+
+/* Selectores */
+div[data-testid="stSelectbox"] > div > div {
+  border: 1px solid var(--moeve-border) !important;
+  border-radius: 6px !important;
+  background: var(--moeve-white) !important;
+}
+
+/* ============================================
+   9. BOTONES - ESTILO FIGMA
+   ============================================ */
+
+/* Botones principales del contenido */
+.main .stButton > button,
+section.main .stButton > button {
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 6px !important;
+  font-size: var(--font-size-base) !important;
+  font-weight: 600 !important;
+  font-family: var(--font-family) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+  border: 1px solid var(--moeve-border) !important;
+  background: var(--moeve-white) !important;
+  color: var(--moeve-text) !important;
+}
+
+/* Botón primario */
+.main .stButton > button[kind="primary"],
+section.main .stButton > button[kind="primary"] {
+  background: var(--moeve-primary) !important;
+  color: var(--moeve-white) !important;
+  border-color: var(--moeve-primary) !important;
+}
+
+.main .stButton > button[kind="primary"]:hover,
+section.main .stButton > button[kind="primary"]:hover {
+  background: var(--moeve-primary) !important;
+  opacity: 0.9 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 70, 86, 0.25) !important;
+}
+
+/* Botón secundario */
+.main .stButton > button:hover,
+section.main .stButton > button:hover {
+  border-color: var(--moeve-primary) !important;
+  background: var(--moeve-primary-light) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ============================================
+   10. LAYOUT Y ESPACIADO - ESTILO FIGMA
+   ============================================ */
+
+/* Contenedor principal más limpio */
+.main .block-container {
+  max-width: 1200px !important;
+  padding: 0 !important;
+}
+
+/* Espaciado entre elementos - más generoso como Figma */
+.main > div {
+  margin-bottom: 2.5rem !important;
+}
+
+/* Espaciado específico para elementos de formulario */
+.main div[data-testid="stTextInput"],
+.main div[data-testid="stTextArea"],
+.main div[data-testid="stSelectbox"],
+.main div[data-testid="stRadio"] {
+  margin-bottom: 1.5rem !important;
+}
+
+/* Columnas de Streamlit - mejor espaciado */
+.main .stColumns {
+  gap: 2rem !important;
+  margin-bottom: 2rem !important;
+}
+
+/* Expansores - estilo más refinado */
+.main .stExpander {
+  border: 1px solid var(--moeve-border) !important;
+  border-radius: 8px !important;
+  margin: 1.5rem 0 !important;
+  background: var(--moeve-white) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+.main .stExpander > div:first-child {
+  background: var(--moeve-white) !important;
+  padding: 1.25rem !important;
+  border-bottom: 1px solid var(--moeve-border) !important;
+  font-weight: 600 !important;
+  color: var(--moeve-text) !important;
+}
+
+.main .stExpander > div:last-child {
+  padding: 1.25rem !important;
+}
+
+/* Separadores horizontales - más sutil */
+.main hr {
+  border: none !important;
+  height: 1px !important;
+  background: var(--moeve-border) !important;
+  margin: 3rem 0 !important;
+}
+
+/* Alertas - mejor integración visual */
+.main .stAlert {
+  border-radius: 8px !important;
+  border: 1px solid var(--moeve-border) !important;
+  padding: 1.25rem !important;
+  margin: 1.5rem 0 !important;
+  font-size: var(--font-size-base) !important;
 }
 
 /* Forzar alineación del texto en botones */
