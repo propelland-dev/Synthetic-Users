@@ -33,8 +33,7 @@ async def guardar_usuario(config: Dict[str, Any]):
         usuarios_dir = STORAGE_DIR / "usuarios"
         usuarios_dir.mkdir(parents=True, exist_ok=True)
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{timestamp}_config.json"
+        filename = "config.json"
         filepath = usuarios_dir / filename
         
         data = {
@@ -67,7 +66,13 @@ async def obtener_usuario_latest():
         if not usuarios_dir.exists():
             raise HTTPException(status_code=404, detail="No hay usuarios configurados")
         
-        # Buscar el archivo más reciente
+        # Primero intentar cargar config.json (nueva versión sobrescribible)
+        config_json = usuarios_dir / "config.json"
+        if config_json.exists():
+            with open(config_json, "r", encoding="utf-8") as f:
+                return json.load(f)
+
+        # Fallback: Buscar el archivo más reciente (legacy)
         config_files = list(usuarios_dir.glob("*_config.json"))
         if not config_files:
             raise HTTPException(status_code=404, detail="No hay usuarios configurados")

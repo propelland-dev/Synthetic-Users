@@ -54,6 +54,9 @@ class SystemConfigFichaProducto(BaseModel):
     anythingllm_api_key: Optional[str] = None
     anythingllm_workspace_slug: Optional[str] = None
     anythingllm_mode: Optional[str] = None
+    # Hugging Face (opcional)
+    huggingface_api_key: Optional[str] = None
+    huggingface_model: Optional[str] = None
 
 
 class GenerarFichaProductoRequest(BaseModel):
@@ -67,7 +70,9 @@ def _normalize_llm_provider(value: Optional[str]) -> str:
     v = str(value).strip().lower()
     if v in {"anythingllm", "anything llm", "anything-llm", "anything_llm"}:
         return "anythingllm"
-    if v in {"ollama", "anythingllm"}:
+    if v in {"huggingface", "hugging face", "hf"}:
+        return "huggingface"
+    if v in {"ollama", "anythingllm", "huggingface"}:
         return v
     return "ollama"
 
@@ -153,8 +158,7 @@ async def guardar_producto(config: ProductoConfig):
         productos_dir = STORAGE_DIR / "productos"
         productos_dir.mkdir(parents=True, exist_ok=True)
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{timestamp}_config.json"
+        filename = "config.json"
         filepath = productos_dir / filename
         
         data = {
@@ -205,6 +209,13 @@ async def generar_ficha_producto(request: GenerarFichaProductoRequest):
                     "mode": mode,
                 }
             )
+        elif provider == "huggingface":
+            llm_config.update(
+                {
+                    "api_key": sys_cfg.get("huggingface_api_key"),
+                    "model": sys_cfg.get("huggingface_model"),
+                }
+            )
 
         llm_client = LLMClient(provider="llama", config=llm_config)
         ficha = llm_client.generate(prompt)
@@ -224,7 +235,13 @@ async def obtener_producto_latest():
         if not productos_dir.exists():
             raise HTTPException(status_code=404, detail="No hay productos configurados")
         
-        # Buscar el archivo más reciente
+        # Primero intentar cargar config.json
+        config_json = productos_dir / "config.json"
+        if config_json.exists():
+            with open(config_json, "r", encoding="utf-8") as f:
+                return json.load(f)
+
+        # Fallback: Buscar el archivo más reciente
         config_files = list(productos_dir.glob("*_config.json"))
         if not config_files:
             raise HTTPException(status_code=404, detail="No hay productos configurados")

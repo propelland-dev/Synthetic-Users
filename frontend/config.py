@@ -6,6 +6,18 @@ import requests
 import json
 from typing import Dict, Any, Optional
 
+# Configuración Hugging Face (Solo para UI)
+HUGGINGFACE_UI_CONFIG = {
+    "models_list": [
+        "ServiceNow-AI/Apriel-1.6-15b-Thinker:together",
+        "Qwen/Qwen3-4B-Thinking-2507:nscale",
+        "meta-llama/Llama-3.1-8B-Instruct:novita",
+        "microsoft/Phi-3.5-mini-instruct",
+        "Qwen/Qwen2.5-7B-Instruct",
+        "HuggingFaceH4/zephyr-7b-beta"
+    ]
+}
+
 # URL base de la API
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 

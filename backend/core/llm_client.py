@@ -9,7 +9,7 @@ import random
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
-from config import LLAMA_CONFIG, ANYTHINGLLM_CONFIG
+from config import LLAMA_CONFIG, ANYTHINGLLM_CONFIG, HUGGINGFACE_CONFIG
 
 
 class LLMClient:
@@ -38,23 +38,21 @@ class LLMClient:
     def _init_llama(self):
         """
         Inicializa configuración para el proveedor "llama" legacy.
-
-        Históricamente este proyecto usaba provider="llama" y luego un sub-proveedor
-        en config["provider"] (p.ej. "ollama").
-
-        Extendemos esto para soportar también "anythingllm".
         """
-        llama_provider = (self.config.get("provider") or LLAMA_CONFIG["provider"] or "ollama").strip().lower()
+        # Prioridad absoluta al provider indicado en la config, si no, fallback al .env
+        llama_provider = self.config.get("provider")
+        if not llama_provider:
+            llama_provider = LLAMA_CONFIG.get("provider", "ollama")
+        
+        llama_provider = str(llama_provider).strip().lower()
         self.llama_provider = llama_provider
         
         if llama_provider == "ollama":
-            self.base_url = self.config.get("base_url", LLAMA_CONFIG["base_url"])
-            model_config = self.config.get("model", LLAMA_CONFIG["model"])
+            # Si forzamos ollama, usamos los valores de OLLAMA o sus defaults, 
+            # NO los de Hugging Face aunque estén en el .env
+            self.base_url = self.config.get("base_url") or LLAMA_CONFIG.get("base_url", "http://127.0.0.1:11434")
+            self.model = self.config.get("model") or LLAMA_CONFIG.get("model", "llama3.2:latest")
             self.min_delay_ms = int(self.config.get("min_delay_ms") or 0)
-            
-            # Solo intentamos detectar el modelo si no estamos en una operación de solo verificación
-            # Para evitar llamadas dobles y timeouts innecesarios
-            self.model = model_config
         elif llama_provider == "anythingllm":
             self.base_url = (self.config.get("base_url") or ANYTHINGLLM_CONFIG["base_url"]).strip()
             self.api_key = (self.config.get("api_key") or ANYTHINGLLM_CONFIG.get("api_key", "") or "").strip()
@@ -62,6 +60,11 @@ class LLMClient:
             self.mode = (self.config.get("mode") or ANYTHINGLLM_CONFIG.get("mode") or "query").strip().lower()
             self.min_delay_ms = int(self.config.get("min_delay_ms") or ANYTHINGLLM_CONFIG.get("min_delay_ms") or 0)
             self.max_retries = int(self.config.get("max_retries") or ANYTHINGLLM_CONFIG.get("max_retries") or 0)
+        elif llama_provider == "huggingface":
+            self.base_url = (self.config.get("base_url") or HUGGINGFACE_CONFIG.get("base_url", "https://router.huggingface.co/models/")).strip()
+            self.api_key = (self.config.get("api_key") or HUGGINGFACE_CONFIG.get("api_key", "") or "").strip()
+            self.model = (self.config.get("model") or HUGGINGFACE_CONFIG.get("model", "") or "").strip()
+            self.min_delay_ms = int(self.config.get("min_delay_ms") or 0)
         else:
             raise ValueError(f"Proveedor LLM no soportado: {llama_provider}")
 
@@ -122,8 +125,11 @@ class LLMClient:
         # Throttling global por instancia (aplica a cualquier proveedor).
         self._maybe_throttle()
         if self.provider == "llama":
-            if getattr(self, "llama_provider", "ollama") == "anythingllm":
+            provider = getattr(self, "llama_provider", "ollama")
+            if provider == "anythingllm":
                 return self._generate_anythingllm(prompt, **kwargs)
+            if provider == "huggingface":
+                return self._generate_huggingface(prompt, temperature, max_tokens, **kwargs)
             return self._generate_llama(prompt, temperature, max_tokens, **kwargs)
         elif self.provider == "chatgpt":
             return self._generate_chatgpt(prompt, temperature, max_tokens, **kwargs)
@@ -154,6 +160,68 @@ class LLMClient:
             return result.get("response", "")
         except requests.exceptions.RequestException as e:
             raise Exception(f"Error al generar con LLaMA: {str(e)}")
+
+    def _generate_huggingface(self, prompt: str, temperature: Optional[float] = None,
+                             max_tokens: Optional[int] = None, **kwargs) -> str:
+        """Genera texto usando Hugging Face Inference API"""
+        temp = temperature if temperature is not None else self.config.get("temperature", HUGGINGFACE_CONFIG["temperature"])
+        max_tok = max_tokens if max_tokens is not None else self.config.get("max_tokens", HUGGINGFACE_CONFIG["max_tokens"])
+        
+        model_id = self.model.strip()
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Intentamos el endpoint v1 (OpenAI compatible) que es el recomendado por HF
+        # Algunas variantes usan el model_id en la URL incluso para v1
+        urls_to_try = [
+            f"https://router.huggingface.co/models/{model_id}/v1/chat/completions",
+            "https://router.huggingface.co/v1/chat/completions",
+            f"https://router.huggingface.co/models/{model_id}"
+        ]
+        
+        last_error = ""
+        for url in urls_to_try:
+            try:
+                if "/v1/chat/completions" in url:
+                    payload = {
+                        "model": model_id,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": max_tok,
+                        "temperature": max(0.1, temp),
+                        "stream": False
+                    }
+                else:
+                    payload = {
+                        "inputs": prompt,
+                        "parameters": {"max_new_tokens": max_tok, "temperature": max(0.1, temp)},
+                        "options": {"wait_for_model": True}
+                    }
+                
+                response = requests.post(url, headers=headers, json=payload, timeout=120)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if isinstance(result, dict) and "choices" in result:
+                        return result["choices"][0]["message"]["content"]
+                    if isinstance(result, list) and len(result) > 0:
+                        return result[0].get("generated_text", "")
+                    if isinstance(result, dict) and "generated_text" in result:
+                        return result["generated_text"]
+                    return str(result)
+                
+                last_error = f"HTTP {response.status_code}: {response.text}"
+                if response.status_code == 410:
+                    continue # Intentar siguiente URL
+                if response.status_code == 403:
+                    raise Exception(f"Acceso denegado (403). Verifica si el modelo '{model_id}' es privado o requiere permisos.")
+                
+            except requests.exceptions.RequestException as e:
+                last_error = str(e)
+                continue
+        
+        raise Exception(f"Hugging Face: No se pudo conectar con el modelo '{model_id}'. Último error: {last_error}")
 
     def _anythingllm_headers(self) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -496,8 +564,11 @@ class LLMClient:
             Diccionario con status y detalles de la conexión
         """
         if self.provider == "llama":
-            if getattr(self, "llama_provider", "ollama") == "anythingllm":
+            provider = getattr(self, "llama_provider", "ollama")
+            if provider == "anythingllm":
                 return self._check_anythingllm_connection()
+            if provider == "huggingface":
+                return self._check_huggingface_connection()
             return self._check_ollama_connection()
         elif self.provider == "chatgpt":
             return {"status": "not_implemented", "message": "ChatGPT no implementado"}
@@ -600,3 +671,43 @@ class LLMClient:
                 "workspace_slug": slug or None,
                 "message": f"Error al verificar AnythingLLM: {str(e)}",
             }
+
+    def _check_huggingface_connection(self) -> Dict[str, Any]:
+        """Verifica la conexión con Hugging Face Inference API"""
+        model_id = getattr(self, "model", "").strip()
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        
+        urls_to_try = [
+            f"https://router.huggingface.co/models/{model_id}/v1/chat/completions",
+            "https://router.huggingface.co/v1/chat/completions",
+            f"https://router.huggingface.co/models/{model_id}"
+        ]
+        
+        last_error = ""
+        for url in urls_to_try:
+            try:
+                if "/v1/chat/completions" in url:
+                    payload = {"model": model_id, "messages": [{"role": "user", "content": "ping"}], "max_tokens": 1}
+                else:
+                    payload = {"inputs": "ping"}
+                
+                response = requests.post(url, headers=headers, json=payload, timeout=15)
+                
+                if response.status_code == 200:
+                    return {
+                        "status": "connected",
+                        "provider": "huggingface",
+                        "model": model_id,
+                        "message": f"Conectado a Hugging Face. Modelo '{model_id}' listo."
+                    }
+                
+                if response.status_code == 503:
+                    return {"status": "connected", "message": f"El modelo '{model_id}' está cargando. Reintenta en unos segundos."}
+                
+                last_error = f"HTTP {response.status_code}: {response.text}"
+                
+            except Exception as e:
+                last_error = str(e)
+                continue
+                
+        return {"status": "error", "message": f"Hugging Face: {last_error}"}

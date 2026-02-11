@@ -295,3 +295,5 @@ Y revisa `OLLAMA_BASE_URL`.
 
 - No se usa LangChain; el backend llama a Ollama por HTTP (`/api/generate`).
 - Actualmente el proveedor soportado es **Ollama** (ChatGPT está preparado pero no implementado en `LLMClient`).
+
+usar docker-compose up --build para levantar el proyecto

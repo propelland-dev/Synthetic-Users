@@ -53,41 +53,24 @@ def _extract_questions(text: str) -> List[str]:
     return out
 
 
-def build_plan(descripcion: str) -> Dict[str, Any]:
+def build_plan(descripcion: str, estilo_investigacion: str = "Entrevista") -> Dict[str, Any]:
     """
     Devuelve un dict serializable (compatible con ResearchPlan).
+    El estilo_investigacion determina directamente el tipo de investigación.
     """
     desc = descripcion or ""
-    questions = _extract_questions(desc)
-
     steps: List[Dict[str, Any]] = []
 
-    # 1) Survey si hay preguntas explícitas
-    if questions:
-        steps.append({"type": "survey", "questions": questions})
-
-    # 2) Entrevista si el texto sugiere entrevista o si no hay preguntas
-    lower = desc.lower()
-    wants_interview = any(w in lower for w in ["entrevista", "conversación", "conversacion", "profundizar", "follow up", "follow-up"])
-    if wants_interview or not questions:
-        # Entrevista en 1 turno (1 llamada) por respondiente.
-        # Si hay preguntas explícitas, ya van en survey; aquí dejamos preguntas vacías
-        # para que el motor haga una entrevista libre guiada por la descripción.
-        steps.append({"type": "interview", "n_questions": 6, "questions": []})
-
-    # 3) Simulación de comportamiento si se menciona explícitamente
-    wants_sim = any(w in lower for w in ["simula", "simulación", "simulacion", "escenario", "tarea", "journey", "flujo"])
-    if wants_sim:
-        steps.append({"type": "behavior_sim", "scenarios": []})
-
-    research_type = "mixed"
-    only_types = {s.get("type") for s in steps}
-    if only_types == {"survey"}:
-        research_type = "survey"
-    elif only_types == {"interview"}:
-        research_type = "interview"
-    elif only_types == {"behavior_sim"}:
-        research_type = "behavior_sim"
+    # Determinar tipo basado en el estilo seleccionado
+    if estilo_investigacion == "Cuestionario":
+        # Para cuestionario, extraer preguntas de la descripción
+        questions = _extract_questions(desc)
+        steps.append({"type": "cuestionario", "questions": questions})
+        research_type = "cuestionario"
+    else:
+        # Por defecto, entrevista
+        steps.append({"type": "entrevista", "n_questions": 6})
+        research_type = "entrevista"
 
     plan = ResearchPlan(version=1, research_type=research_type, steps=steps)
     return plan.model_dump()

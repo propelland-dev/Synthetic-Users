@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Agregar el directorio padre al path para importar config
 sys.path.append(str(Path(__file__).parent.parent))
-from config import verificar_ollama, verificar_llm
+from config import verificar_ollama, verificar_llm, HUGGINGFACE_UI_CONFIG
 from utils import cargar_config, existe_config
 
 def render_config():
@@ -12,29 +12,7 @@ def render_config():
     
     st.markdown("""
     Configure los prompts internos y la selección del modelo de lenguaje.
-    
-    **Nota:** Este proyecto usa **requests directos a la API de Ollama** (no LangChain).
-    La configuración de Ollama se encuentra en `backend/config.py` o mediante variables de entorno.
     """)
-    
-    with st.expander("ℹ️ Información sobre la configuración de Ollama"):
-        st.markdown("""
-        **Configuración de Ollama:**
-        
-        La configuración se encuentra en `backend/config.py`:
-        - **URL base:** `http://localhost:11434` (por defecto)
-        - **Modelo:** `llama2` (por defecto, puedes cambiarlo)
-        
-        **Variables de entorno disponibles:**
-        - `OLLAMA_BASE_URL`: URL de Ollama (default: http://localhost:11434)
-        - `LLAMA_MODEL`: Nombre del modelo (default: llama2)
-        - `LLAMA_TEMPERATURE`: Temperatura (default: 0.7)
-        - `LLAMA_MAX_TOKENS`: Máximo de tokens (default: 1000)
-        
-        **Para cambiar el modelo:**
-        1. Asegúrate de tener el modelo descargado en Ollama: `ollama pull nombre_modelo`
-        2. Cambia la variable de entorno `LLAMA_MODEL` o edita `backend/config.py`
-        """)
     
     # Cargar configuración guardada si existe
     config_cargada = cargar_config("system") if existe_config("system") else None
@@ -47,16 +25,26 @@ def render_config():
         or "anythingllm"
     )
     default_provider = str(default_provider).strip().lower()
-    if default_provider not in {"ollama", "anythingllm"}:
+    if default_provider not in {"ollama", "anythingllm", "huggingface"}:
         default_provider = "anythingllm"
 
     llm_provider_label = st.selectbox(
         "Selecciona el proveedor",
-        options=["AnythingLLM", "Ollama (local)"],
-        index=0 if default_provider == "anythingllm" else 1,
-        help="AnythingLLM permite usar OpenAI (u otro) a través de tu instancia AnythingLLM. Ollama genera local."
+        options=["AnythingLLM", "Ollama (local)", "Hugging Face"],
+        index=(
+            0 if default_provider == "anythingllm" 
+            else 2 if default_provider == "huggingface"
+            else 1
+        ),
+        help="AnythingLLM permite usar OpenAI (u otro) a través de tu instancia AnythingLLM. Ollama genera local. Hugging Face usa Inference API."
     )
-    llm_provider = "anythingllm" if llm_provider_label == "AnythingLLM" else "ollama"
+    
+    if llm_provider_label == "AnythingLLM":
+        llm_provider = "anythingllm"
+    elif llm_provider_label == "Hugging Face":
+        llm_provider = "huggingface"
+    else:
+        llm_provider = "ollama"
 
     # Guardar el provider en session_state para permitir \"Iniciar\" sin pasar por Guardar
     st.session_state["system_llm_provider"] = llm_provider
@@ -64,7 +52,7 @@ def render_config():
     # --- Conexión / verificación ---
     st.markdown("### Estado de Conexión")
         
-    if st.button("🔍 Verificar Conexión", use_container_width=True):
+    if st.button("🔍 Verificar Conexión"):
         with st.spinner("Verificando conexión..."):
             # Construir un system_config mínimo para el check
             payload = {
@@ -73,8 +61,10 @@ def render_config():
                 "anythingllm_api_key": st.session_state.get("system_anythingllm_api_key") or (config_cargada or {}).get("anythingllm_api_key"),
                 "anythingllm_workspace_slug": st.session_state.get("system_anythingllm_workspace_slug") or (config_cargada or {}).get("anythingllm_workspace_slug"),
                 "anythingllm_mode": st.session_state.get("system_anythingllm_mode") or (config_cargada or {}).get("anythingllm_mode"),
+                "huggingface_api_key": st.session_state.get("system_huggingface_api_key") or (config_cargada or {}).get("huggingface_api_key"),
+                "huggingface_model": st.session_state.get("system_huggingface_model") or (config_cargada or {}).get("huggingface_model"),
             }
-            status = verificar_llm(payload) if llm_provider == "anythingllm" else verificar_ollama()
+            status = verificar_llm(payload) if llm_provider in {"anythingllm", "huggingface"} else verificar_ollama()
             st.session_state['llm_status'] = status or {
                 "status": "error",
                 "message": "No se pudo verificar la conexión (backend no accesible o error de red)."
@@ -126,6 +116,37 @@ def render_config():
             help="(Opcional) Ruta local del modelo. Normalmente no es necesario con Ollama.",
             key="system_modelo_path",
         )
+    elif llm_provider == "huggingface":
+        st.info("Configura tu acceso a Hugging Face Inference API en el backend (.env).")
+        
+        # Lista de modelos desde el archivo de configuración del frontend
+        modelos_hf = HUGGINGFACE_UI_CONFIG.get("models_list", [])
+        # Modelo por defecto o guardado
+        modelo_actual = (st.session_state.get("system_huggingface_model") 
+                         or (config_cargada or {}).get("huggingface_model") 
+                         or (modelos_hf[0] if modelos_hf else ""))
+        
+        # Si el modelo actual no está en la lista, lo añadimos como opción personalizada
+        if modelo_actual and modelo_actual not in modelos_hf:
+            modelos_hf = [modelo_actual] + modelos_hf
+            
+        modelo_hf_seleccionado = st.selectbox(
+            "Selecciona un Modelo Hugging Face",
+            options=modelos_hf + ["Otro (especificar...)"],
+            index=modelos_hf.index(modelo_actual) if modelo_actual in modelos_hf else 0,
+            key="hf_model_selectbox"
+        )
+        
+        if modelo_hf_seleccionado == "Otro (especificar...)":
+            st.text_input(
+                "Especifica el nombre del modelo",
+                value=(modelo_actual if modelo_actual not in modelos_hf else ""),
+                placeholder="usuario/modelo",
+                help="Nombre del modelo en Hugging Face (ej: mistralai/Mistral-7B-Instruct-v0.3).",
+                key="system_huggingface_model",
+            )
+        else:
+            st.session_state["system_huggingface_model"] = modelo_hf_seleccionado
     else:
         st.info("Si ya tienes AnythingLLM configurado en el backend (env/.env), no necesitas rellenar nada aquí.")
         with st.expander("Avanzado: parámetros de AnythingLLM (opcional)"):
@@ -203,35 +224,116 @@ Sé específico y realista. No inventes datos que contradigan las 3 dimensiones;
         key="system_prompt_perfil",
     )
     
-    # Prompt para investigación (genera un resultado único)
-    st.markdown("#### Prompt: Ejecución de Investigación")
-    prompt_investigacion_default = """Eres {nombre_usuario}, un usuario con las siguientes características:
+    # Prompt para cuestionarios
+    st.markdown("#### Prompt: Respuesta a Cuestionarios")
+    prompt_cuestionario_default = """Eres {nombre_usuario}, con el siguiente perfil:
 {perfil_usuario}
 
-Estás participando en una investigación sobre el siguiente producto/experiencia:
-Nombre: {nombre_producto}
-Descripción: {descripcion_producto}
+CONTEXTO DEL PRODUCTO:
+{descripcion_producto}
 
-El equipo de investigación ha definido esta investigación así:
+SITUACIÓN DE LA INVESTIGACIÓN:
 {investigacion_descripcion}
 
-Tu tarea es generar un único **resultado de investigación** en texto, en español, que incluya:
-- Hallazgos principales
-- Fricciones / barreras detectadas
-- Necesidades y expectativas
-- Recomendaciones accionables
+Acabas de participar en la situación descrita en la investigación. Ahora estás completando un cuestionario ESCRITO. 
 
-No lo estructures como preguntas y respuestas; entrega un informe compacto y claro."""
+Como es un formulario escrito, tus respuestas deben ser:
+- Directas y concisas (como cuando escribes en un formulario)
+- Más pensadas y estructuradas que en una conversación oral
+- Sin muletillas ni divagaciones
+- Enfocadas en responder exactamente lo que se pregunta
+
+PREGUNTAS:
+{preguntas}
+
+FORMATO DE RESPUESTA (responde solo con las respuestas, una por línea):
+A1: [tu respuesta directa y específica]
+A2: [tu respuesta directa y específica]
+A3: [tu respuesta directa y específica]
+...
+
+Recuerda: estás ESCRIBIENDO respuestas, no hablando. Sé preciso y directo."""
     
-    prompt_investigacion = st.text_area(
-        "Prompt para ejecutar investigación",
-        value=(
-            config_cargada.get("prompt_investigacion")
-            or prompt_investigacion_default
-        ) if config_cargada else prompt_investigacion_default,
+    prompt_cuestionario = st.text_area(
+        "Prompt para responder cuestionarios estructurados",
+        value=(config_cargada.get("prompt_cuestionario") or prompt_cuestionario_default) if config_cargada else prompt_cuestionario_default,
         height=200,
-        help="Variables disponibles: {nombre_usuario}, {perfil_usuario}, {nombre_producto}, {descripcion_producto}, {investigacion_descripcion}",
-        key="system_prompt_investigacion",
+        help="Variables disponibles: {nombre_usuario}, {perfil_usuario}, {descripcion_producto}, {investigacion_descripcion}, {preguntas}",
+        key="system_prompt_cuestionario",
+    )
+
+    # Prompt para entrevistas
+    st.markdown("#### Prompt: Simulación de Entrevistas")
+    prompt_entrevista_default = """Eres {nombre_usuario}, con el siguiente perfil:
+{perfil_usuario}
+
+CONTEXTO DEL PRODUCTO:
+{descripcion_producto}
+
+SITUACIÓN DE LA INVESTIGACIÓN:
+{investigacion_descripcion}
+
+Vas a participar en una entrevista CONVERSACIONAL sobre tu experiencia. El entrevistador te hará {n_questions} preguntas relacionadas con la investigación.
+
+Como es una conversación oral, tus respuestas deben ser:
+- Naturales y espontáneas (como cuando hablas en persona)
+- Más elaboradas y explicativas que en un formulario escrito
+- Pueden incluir ejemplos, anécdotas o contexto adicional
+- Reflejan tu forma de hablar y expresarte
+
+Genera tanto las preguntas del entrevistador como tus respuestas conversacionales.
+
+FORMATO DE RESPUESTA:
+P1: [pregunta del entrevistador]
+R1: [tu respuesta conversacional como este usuario]
+
+P2: [pregunta del entrevistador]
+R2: [tu respuesta conversacional como este usuario]
+
+...
+
+Seed para variabilidad: {seed}
+
+Recuerda: estás HABLANDO en una entrevista, no escribiendo. Sé natural y conversacional."""
+    
+    prompt_entrevista = st.text_area(
+        "Prompt para simular entrevistas conversacionales",
+        value=(config_cargada.get("prompt_entrevista") or prompt_entrevista_default) if config_cargada else prompt_entrevista_default,
+        height=200,
+        help="Variables disponibles: {nombre_usuario}, {perfil_usuario}, {descripcion_producto}, {investigacion_descripcion}, {n_questions}, {seed}",
+        key="system_prompt_entrevista",
+    )
+
+    # Prompt para síntesis final
+    st.markdown("#### Prompt: Síntesis de Investigación")
+    prompt_sintesis_default = """Eres un investigador UX experto analizando respuestas de usuarios sintéticos.
+
+CONTEXTO DE LA INVESTIGACIÓN:
+Producto: {nombre_producto}
+Descripción: {descripcion_producto}
+
+Objetivo de investigación:
+{investigacion_descripcion}
+
+DATOS RECOPILADOS:
+Has recopilado respuestas de {nombre_usuario} sobre este producto. A continuación tienes los datos crudos de las respuestas por respondiente.
+
+Analiza estos datos y genera un informe de investigación profesional que incluya:
+- Resumen ejecutivo
+- Hallazgos principales
+- Patrones identificados entre usuarios
+- Fricciones y barreras detectadas
+- Necesidades y expectativas clave
+- Recomendaciones accionables y priorizadas
+
+Cita evidencias específicas de las respuestas cuando sea útil. Mantén un tono profesional y objetivo."""
+    
+    prompt_sintesis = st.text_area(
+        "Prompt para generar síntesis final de investigación",
+        value=(config_cargada.get("prompt_sintesis") or prompt_sintesis_default) if config_cargada else prompt_sintesis_default,
+        height=200,
+        help="Variables disponibles: {nombre_usuario}, {nombre_producto}, {descripcion_producto}, {investigacion_descripcion}",
+        key="system_prompt_sintesis",
     )
 
     # Prompt para generar ficha de producto
@@ -280,17 +382,21 @@ REQUISITOS DE SALIDA
         "max_tokens": max_tokens,
         "modelo_path": st.session_state.get("system_modelo_path") or "",
         "prompt_perfil": prompt_perfil,
-        "prompt_investigacion": prompt_investigacion,
+        "prompt_cuestionario": prompt_cuestionario,
+        "prompt_entrevista": prompt_entrevista,
+        "prompt_sintesis": prompt_sintesis,
         "prompt_ficha_producto": prompt_ficha_producto,
         "anythingllm_base_url": st.session_state.get("system_anythingllm_base_url"),
         "anythingllm_api_key": st.session_state.get("system_anythingllm_api_key"),
         "anythingllm_workspace_slug": st.session_state.get("system_anythingllm_workspace_slug"),
         "anythingllm_mode": st.session_state.get("system_anythingllm_mode"),
+        "huggingface_api_key": st.session_state.get("system_huggingface_api_key"),
+        "huggingface_model": st.session_state.get("system_huggingface_model"),
     }
 
     # Acciones
     st.markdown("---")
-    if st.button("Restaurar por Defecto", use_container_width=True, key="config_restore_defaults"):
+    if st.button("Restaurar por Defecto", key="config_restore_defaults"):
         st.session_state['system_config'] = None
         for k in [
             "system_llm_provider",
@@ -298,12 +404,16 @@ REQUISITOS DE SALIDA
             "system_max_tokens",
             "system_modelo_path",
             "system_prompt_perfil",
-            "system_prompt_investigacion",
+            "system_prompt_cuestionario",
+            "system_prompt_entrevista",
+            "system_prompt_sintesis",
             "system_prompt_ficha_producto",
             "system_anythingllm_base_url",
             "system_anythingllm_api_key",
             "system_anythingllm_workspace_slug",
             "system_anythingllm_mode",
+            "system_huggingface_api_key",
+            "system_huggingface_model",
             "llm_status",
         ]:
             st.session_state.pop(k, None)

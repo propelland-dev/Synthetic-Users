@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: moeve-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/storage:/app/backend/storage
+    # Inyectamos las variables de entorno desde el .env del backend si existe
+    env_file:
+      - ./backend/.env
+    restart: always
+    networks:
+      - moeve-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: moeve-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - API_BASE_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - moeve-network
+
+networks:
+  moeve-network:
+    driver: bridge

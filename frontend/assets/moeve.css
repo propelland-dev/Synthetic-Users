@@ -44,14 +44,15 @@
   --moeve-primary: #004656;
   --moeve-primary-light: #CCE2F2;
   --moeve-white: #FFFFFF;
-  --moeve-bg: #F8FAFC;
+  --moeve-bg: #FFFFFF;
   
   /* Textos */
   --moeve-text: #111827;
-  --moeve-text-light: #6B7280;
+  --moeve-text-light: #6B7280; /* Restaurado al original */
+  --moeve-input-color: #5A7D91; /* Nuevo color para inputs/labels */
   
   /* Bordes y elementos */
-  --moeve-border: #E5E7EB;
+  --moeve-border: #5A7D91;
   --moeve-success: #10B981;
   --moeve-error: #EF4444;
   
@@ -139,30 +140,23 @@ span.material-symbols-outlined,
    5. LAYOUT - SIDEBAR Y CONTENIDO PRINCIPAL
    ============================================ */
 
-/* Sidebar container */
-[data-testid="stSidebar"] {
-  background: var(--moeve-white) !important;
-  border-right: 1px solid var(--moeve-border);
-  min-width: 280px !important;
-  max-width: 280px !important;
-}
-
-[data-testid="stSidebar"] > div:first-child {
-  background: var(--moeve-white);
-  padding: var(--spacing-md);
-}
-
-/* Contenido principal - estilo panel izquierdo Figma */
+.stApp, 
+[data-testid="stAppViewContainer"], 
+[data-testid="stMainViewContainer"],
 section.main {
-  background: var(--moeve-white) !important;
-  padding: 2.5rem 3rem !important;
-  margin: 0 !important;
-  min-height: 100vh;
+  background-color: var(--moeve-white) !important;
+}
+
+[data-testid="stSidebar"] {
+  background-color: var(--moeve-white) !important;
+  border-right: 1px solid var(--moeve-border) !important;
 }
 
 .main .block-container {
-  max-width: none !important;
-  padding: 0 !important;
+  background-color: var(--moeve-white) !important;
+  max-width: 1100px !important;
+  padding: 3rem 4rem !important;
+  margin: 0 auto !important;
 }
 
 /* ============================================
@@ -504,7 +498,7 @@ div[data-testid="stRadio"] label,
 [data-testid="stWidgetLabel"] p {
   font-size: 0.95rem !important;
   font-weight: 400 !important; /* Regular para el título del campo */
-  color: var(--moeve-text) !important;
+  color: var(--moeve-input-color) !important; /* Usar el nuevo color específico */
   margin-bottom: 0.5rem !important;
   display: block !important;
   letter-spacing: 0.01em !important;
@@ -514,62 +508,84 @@ div[data-testid="stRadio"] label,
 div[data-testid="stRadio"] [role="radiogroup"] {
   display: flex !important;
   flex-direction: row !important;
-  gap: 1.5rem !important;
+  gap: 2rem !important;
   align-items: center !important;
-  padding: 0.5rem 0 !important;
+  padding: 0.75rem 0 !important;
+  flex-wrap: wrap !important;
 }
 
 div[data-testid="stRadio"] label {
   display: flex !important;
+  flex-direction: row !important;
   align-items: center !important;
-  margin-bottom: 0 !important;
   gap: 0.5rem !important;
-  cursor: pointer !important;
+  margin-right: 1rem !important;
 }
 
-/* Estilo del texto de las opciones del Radio - Más grande y Light */
-div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
-  font-size: 1rem !important;
-  font-weight: 300 !important; /* Light weight */
-  color: var(--moeve-text) !important;
+/* Estilo del texto de las opciones del Radio */
+div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {
+  font-size: 0.95rem !important;
+  font-weight: 400 !important;
+  color: var(--moeve-input-color) !important;
   margin: 0 !important;
-  line-height: 1.2 !important;
+  white-space: nowrap !important;
 }
 
-/* Alinear el círculo del radio (el div que contiene el input) */
-div[data-testid="stRadio"] label > div:first-child {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin-top: 0 !important;
+/* Borde para los radios */
+div[data-testid="stRadio"] label div[data-bv] {
+  border: 1px solid var(--moeve-input-color) !important;
 }
 
 /* Estados focus de inputs */
+.main input,
+.main textarea,
+.main select,
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextArea"] textarea,
+div[data-testid="stNumberInput"] input,
+div[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+  border: 1px solid var(--moeve-input-color) !important;
+  border-radius: 6px !important;
+  background-color: var(--moeve-white) !important;
+  color: var(--moeve-input-color) !important;
+  box-shadow: none !important;
+}
+
+/* Estilo para los placeholders */
+.main input::placeholder,
+.main textarea::placeholder {
+  color: var(--moeve-input-color) !important;
+  opacity: 0.6;
+}
+
 .main input:focus,
 .main textarea:focus,
 div[data-testid="stTextInput"] input:focus,
 div[data-testid="stTextArea"] textarea:focus,
-div[data-testid="stNumberInput"] input:focus {
+div[data-testid="stNumberInput"] input:focus,
+div[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
   outline: none !important;
   border-color: var(--moeve-primary) !important;
   box-shadow: 0 0 0 3px rgba(0, 70, 86, 0.1) !important;
 }
 
-/* Selectores */
-div[data-testid="stSelectbox"] > div > div {
-  border: 1px solid var(--moeve-border) !important;
-  border-radius: 6px !important;
-  background: var(--moeve-white) !important;
-}
+/* Selectores - YA GESTIONADOS EN SECCIÓN DE INPUTS */
 
 /* ============================================
    9. BOTONES - ESTILO FIGMA
    ============================================ */
 
 /* Botones principales del contenido */
+.main .stButton {
+  width: fit-content !important;
+  display: block !important;
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+
 .main .stButton > button,
 section.main .stButton > button {
-  padding: 0.75rem 1.5rem !important;
+  padding: 0.75rem 2.5rem !important;
   border-radius: 6px !important;
   font-size: var(--font-size-base) !important;
   font-weight: 600 !important;
@@ -578,7 +594,11 @@ section.main .stButton > button {
   cursor: pointer !important;
   border: 1px solid var(--moeve-border) !important;
   background: var(--moeve-white) !important;
-  color: var(--moeve-text) !important;
+  color: var(--moeve-primary) !important; /* Texto de botón en azul primario */
+  width: auto !important; 
+  min-width: 180px !important;
+  max-width: 100% !important;
+  display: inline-block !important;
 }
 
 /* Botón primario */
@@ -609,11 +629,7 @@ section.main .stButton > button:hover {
    10. LAYOUT Y ESPACIADO - ESTILO FIGMA
    ============================================ */
 
-/* Contenedor principal más limpio */
-.main .block-container {
-  max-width: 1200px !important;
-  padding: 0 !important;
-}
+/* Contenedor principal - Layout gestionado en sección 5 */
 
 /* Espaciado entre elementos - más generoso como Figma */
 .main > div {

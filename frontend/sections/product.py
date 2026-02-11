@@ -237,7 +237,7 @@ def render_producto():
     st.markdown("---")
     col_gen, col_info = st.columns([1, 2])
     with col_gen:
-        clicked = st.button("Generar/Actualizar ficha", use_container_width=True, key="producto_generar_ficha")
+        clicked = st.button("Generar/Actualizar ficha", key="producto_generar_ficha")
     with col_info:
         st.caption("La ficha se usará como contexto del producto en la investigación.")
 
@@ -318,7 +318,7 @@ def render_producto():
     st.markdown("---")
     with st.expander("🧹 Limpiar producto", expanded=False):
         st.caption("Limpia los campos y la ficha guardados (último estado).")
-        if st.button("Limpiar campos y ficha", type="secondary", use_container_width=True, key="producto_clear_all"):
+        if st.button("Limpiar campos y ficha", type="secondary", key="producto_clear_all"):
             guardar_config(
                 "producto",
                 {
@@ -364,7 +364,7 @@ def render_producto():
                 st.session_state.pop(k, None)
             st.rerun()
 
-    if st.button("Resetear", use_container_width=True, key="producto_reset"):
+    if st.button("Resetear", key="producto_reset"):
         for k in [
             "producto_tipo",
             "producto_tipo_radio",

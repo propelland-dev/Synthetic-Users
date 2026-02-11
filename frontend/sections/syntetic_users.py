@@ -150,7 +150,7 @@ def render_usuarios_sinteticos():
 
         # Acciones
         st.markdown("---")
-        if st.button("Resetear", use_container_width=True, key="usuarios_reset_single"):
+        if st.button("Resetear", key="usuarios_reset_single"):
             st.session_state["usuario_config"] = None
             st.session_state.pop("usuario_config_synced_backend", None)
             for k in [
@@ -307,7 +307,7 @@ def render_usuarios_sinteticos():
 
     col_add, col_status = st.columns([1, 3])
     with col_add:
-        if st.button("➕ Añadir arquetipo", use_container_width=True):
+        if st.button("➕ Añadir arquetipo"):
             _add_population_row()
             st.rerun()
 
@@ -360,7 +360,7 @@ def render_usuarios_sinteticos():
 
     # Acciones
     st.markdown("---")
-    if st.button("Resetear", use_container_width=True, key="usuarios_reset_population"):
+    if st.button("Resetear", key="usuarios_reset_population"):
         st.session_state["usuario_config"] = None
         st.session_state.pop("usuario_config_synced_backend", None)
         for k in [

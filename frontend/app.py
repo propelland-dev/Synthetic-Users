@@ -359,7 +359,9 @@ def _render_job_progress(run_slot):
         elif event in {"cancel_requested", "cancelled"}:
             last_line = "Cancelando…"
         elif event == "error":
-            last_line = "Error"
+            # Mostrar el mensaje específico del error
+            error_msg = ev.get("message", "Error desconocido")
+            last_line = f"Error: {error_msg}"
         else:
             # Fallback: mostrar mensaje del backend si es útil
             msg = ev.get("message")
@@ -419,7 +421,9 @@ def _render_job_progress(run_slot):
         return False
 
     if job_status == "error":
-        st.sidebar.error("❌ Error en la investigación (revisa el backend).")
+        # Mostrar el error específico si está disponible
+        error_detail = st.session_state.get("investigacion_job_last_line", "Error desconocido")
+        st.sidebar.error(f"❌ {error_detail}")
         st.session_state.pop("investigacion_run_id", None)
         st.session_state.pop("investigacion_job_cursor", None)
         st.session_state.pop("investigacion_job_last_line", None)

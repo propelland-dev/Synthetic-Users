@@ -10,8 +10,7 @@ def render_investigacion():
     st.markdown('<div class="section-title"><span class="material-symbols-outlined">travel_explore</span>Investigación</div>', unsafe_allow_html=True)
     
     st.markdown("""
-    Describe la investigación. Si quieres hacer una entrevista, puedes incluir las preguntas dentro de esta descripción
-    (por ejemplo, una por línea).
+    Describe la investigación que quieres realizar. El tipo de investigación se determinará por la opción seleccionada arriba.
     """)
     
     # Cargar configuración guardada si existe
@@ -21,24 +20,25 @@ def render_investigacion():
     # Estilo de investigación
     st.markdown("### Estilo de investigación")
     estilos = [
-        "Cuestionario cerrado",
-        "Entrevista abierta",
-        "Observación / Shadowing",
-        "Simulación de comportamiento",
-        "Diarios",
-        "Prototipos",
+        "Cuestionario",
+        "Entrevista",
     ]
 
     if "investigacion_estilo" not in st.session_state:
         saved = str(config_cargada.get("estilo_investigacion") or "").strip()
-        st.session_state["investigacion_estilo"] = saved if saved in estilos else "Entrevista abierta"
+        # Migrar estilos antiguos a los nuevos
+        if saved == "Cuestionario cerrado":
+            saved = "Cuestionario"
+        elif saved == "Entrevista abierta":
+            saved = "Entrevista"
+        st.session_state["investigacion_estilo"] = saved if saved in estilos else "Entrevista"
 
     st.selectbox(
         "Estilo de investigación",
         options=estilos,
         index=estilos.index(st.session_state["investigacion_estilo"]) if st.session_state["investigacion_estilo"] in estilos else 1,
         key="investigacion_estilo",
-        help="Este estilo se incluirá al inicio del contexto de investigación.",
+        help="Cuestionario: respuestas estructuradas a preguntas específicas. Entrevista: conversación más abierta y exploratoria.",
     )
     
     # Descripción de investigación (nuevo modelo)
@@ -73,7 +73,7 @@ def render_investigacion():
 
     # Acciones
     st.markdown("---")
-    if st.button("Resetear", use_container_width=True, key="investigacion_reset"):
+    if st.button("Resetear", key="investigacion_reset"):
         st.session_state.pop("investigacion_descripcion", None)
         st.session_state.pop("investigacion_estilo", None)
         st.session_state.pop("investigacion_config", None)

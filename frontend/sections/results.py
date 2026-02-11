@@ -147,7 +147,7 @@ def render_resultados():
         st.markdown("---")
         col_a, col_b = st.columns([1, 1])
         with col_a:
-            if st.button("Generar PDF", use_container_width=True, key="results_generate_pdf"):
+            if st.button("Generar PDF", key="results_generate_pdf"):
                 try:
                     pdf_bytes = _build_result_pdf_bytes(resultados)
                     st.session_state["pdf_resultados_bytes"] = pdf_bytes
@@ -165,13 +165,12 @@ def render_resultados():
                     data=pdf_bytes,
                     file_name=filename,
                     mime="application/pdf",
-                    use_container_width=True,
                     key="results_download_pdf",
                 )
         
         # Botón para refrescar
         with col_b:
-            if st.button("Actualizar Resultados", use_container_width=True, key="results_refresh"):
+            if st.button("Actualizar Resultados", key="results_refresh"):
                 with st.spinner("🔄 Actualizando datos desde la API..."):
                     resultado = obtener_resultados_latest()
                     if resultado:

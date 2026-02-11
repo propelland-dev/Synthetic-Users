@@ -15,7 +15,6 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from config import STORAGE_DIR
-from core.research_engine import ResearchEngine
 from core.multi_research_engine import MultiResearchEngine
 from core.llm_client import LLMClient
 from core.models import UsuarioConfigV2
@@ -64,21 +63,32 @@ def _job_append_event(job: Dict[str, Any], ev: Dict[str, Any]) -> None:
         events.append(ev)
 
 
-def _load_latest_configs() -> tuple[UsuarioConfigV2, Dict[str, Any], Dict[str, Any], str]:
+def _load_latest_configs() -> tuple[UsuarioConfigV2, Dict[str, Any], Dict[str, Any], str, str]:
     """
     Load latest user/product/research configs from storage.
-    Returns: (usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion)
+    Returns: (usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion, estilo_investigacion)
     """
     usuarios_dir = STORAGE_DIR / "usuarios"
     productos_dir = STORAGE_DIR / "productos"
     investigaciones_dir = STORAGE_DIR / "investigaciones"
 
-    usuario_files = list(usuarios_dir.glob("*_config.json"))
-    if not usuario_files:
+    # Auxiliar para cargar config.json o el más reciente
+    def _load_config(directory: Path) -> Dict[str, Any]:
+        cjson = directory / "config.json"
+        if cjson.exists():
+            with open(cjson, "r", encoding="utf-8") as f:
+                return json.load(f)
+        files = list(directory.glob("*_config.json"))
+        if not files:
+            return {}
+        latest = max(files, key=lambda p: p.stat().st_mtime)
+        with open(latest, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    usuario_data = _load_config(usuarios_dir)
+    if not usuario_data:
         raise HTTPException(status_code=400, detail="No hay usuario configurado")
-    usuario_file = max(usuario_files, key=lambda p: p.stat().st_mtime)
-    with open(usuario_file, "r", encoding="utf-8") as f:
-        usuario_data = json.load(f)
+    
     usuario_config_raw = usuario_data.get("config") or {}
     try:
         if isinstance(usuario_config_raw, dict) and usuario_config_raw.get("mode") in {"single", "population"}:
@@ -88,33 +98,45 @@ def _load_latest_configs() -> tuple[UsuarioConfigV2, Dict[str, Any], Dict[str, A
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=f"Config de usuario inválida: {e}")
 
-    producto_files = list(productos_dir.glob("*_config.json"))
-    if not producto_files:
+    producto_data = _load_config(productos_dir)
+    if not producto_data:
         raise HTTPException(status_code=400, detail="No hay producto configurado")
-    producto_file = max(producto_files, key=lambda p: p.stat().st_mtime)
-    with open(producto_file, "r", encoding="utf-8") as f:
-        producto_data = json.load(f)
+    
     producto_config = producto_data.get("config") or {}
     if "nombre_producto" not in producto_config:
         producto_config["nombre_producto"] = "Producto"
     if "descripcion" not in producto_config:
         producto_config["descripcion"] = ""
 
-    investigacion_files = list(investigaciones_dir.glob("*_config.json"))
-    if not investigacion_files:
+    investigacion_data = _load_config(investigaciones_dir)
+    if not investigacion_data:
         raise HTTPException(status_code=400, detail="No hay investigación configurada")
-    investigacion_file = max(investigacion_files, key=lambda p: p.stat().st_mtime)
-    with open(investigacion_file, "r", encoding="utf-8") as f:
-        investigacion_data = json.load(f)
+    
     investigacion_config = investigacion_data.get("config", {}) or {}
     investigacion_descripcion = investigacion_config.get("descripcion", "")
     if not isinstance(investigacion_descripcion, str) or not investigacion_descripcion.strip():
         raise HTTPException(status_code=400, detail="La investigación debe incluir una descripción")
-    estilo = investigacion_config.get("estilo_investigacion") if isinstance(investigacion_config, dict) else None
-    if isinstance(estilo, str) and estilo.strip():
-        investigacion_descripcion = f"Estilo de investigación: {estilo.strip()}\n\n{investigacion_descripcion}"
+    
+    estilo_investigacion = investigacion_config.get("estilo_investigacion", "Entrevista")
+    if not isinstance(estilo_investigacion, str) or estilo_investigacion.strip() not in ["Cuestionario", "Entrevista"]:
+        estilo_investigacion = "Entrevista"
 
-    return usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion
+    return usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion, estilo_investigacion
+
+
+def _normalize_llm_provider(value: Optional[str]) -> str:
+    if not value:
+        return "ollama"
+    v = str(value).strip().lower()
+    if v in {"llama local", "llama", "l\u200blla\u200bma local"}:
+        return "ollama"
+    if v in {"anythingllm", "anything llm", "anything-llm", "anything_llm"}:
+        return "anythingllm"
+    if v in {"huggingface", "hugging face", "hf"}:
+        return "huggingface"
+    if v in {"ollama", "llama-cpp-python", "anythingllm", "huggingface"}:
+        return v
+    return "ollama"
 
 
 def _build_llm_client(system_config_dict: Dict[str, Any]) -> LLMClient:
@@ -137,6 +159,13 @@ def _build_llm_client(system_config_dict: Dict[str, Any]) -> LLMClient:
                 "mode": mode,
             }
         )
+    elif normalized_provider == "huggingface":
+        llm_config.update(
+            {
+                "api_key": system_config_dict.get("huggingface_api_key"),
+                "model": system_config_dict.get("huggingface_model"),
+            }
+        )
     return LLMClient(provider="llama", config=llm_config)
 
 
@@ -151,15 +180,17 @@ def _run_job(run_id: str, system_config_dict: Dict[str, Any]) -> None:
 
     try:
         _job_append_event(job, {"event": "start", "message": "Iniciando investigación..."})
-        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion = _load_latest_configs()
+        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion, estilo_investigacion = _load_latest_configs()
 
-        prompt_investigacion = system_config_dict.get("prompt_investigacion")
-        if not prompt_investigacion:
+        # Verificar que los prompts necesarios estén configurados
+        required_prompts = ["prompt_perfil", "prompt_sintesis"]
+        missing_prompts = [p for p in required_prompts if not system_config_dict.get(p)]
+        if missing_prompts:
             _job_append_event(
                 job,
                 {
                     "event": "error",
-                    "message": "Falta 'prompt_investigacion' en la configuración del sistema. Ve a ⚙️ Configuración y guarda la configuración del sistema.",
+                    "message": f"Faltan prompts en la configuración: {', '.join(missing_prompts)}. Ve a ⚙️ Configuración.",
                 },
             )
             job["status"] = "error"
@@ -167,7 +198,7 @@ def _run_job(run_id: str, system_config_dict: Dict[str, Any]) -> None:
 
         llm_client = _build_llm_client(system_config_dict)
         _job_append_event(job, {"event": "planning", "message": "Preparando plan..."})
-        plan = build_plan(investigacion_descripcion)
+        plan = build_plan(investigacion_descripcion, estilo_investigacion)
         respondents = [r.model_dump() for r in usuario_cfg_v2.to_effective_respondents()]
         _job_append_event(job, {"event": "planning_done", "message": f"Plan listo. Respondientes: {len(respondents)}."})
 
@@ -178,7 +209,9 @@ def _run_job(run_id: str, system_config_dict: Dict[str, Any]) -> None:
             llm_client=llm_client,
             plan=plan,
             prompt_perfil=system_config_dict.get("prompt_perfil"),
-            prompt_sintesis=prompt_investigacion,
+            prompt_cuestionario=system_config_dict.get("prompt_cuestionario"),
+            prompt_entrevista=system_config_dict.get("prompt_entrevista"),
+            prompt_sintesis=system_config_dict.get("prompt_sintesis"),
         )
 
         for ev in engine.execute_stream(cancel_check=cancelled):
@@ -202,13 +235,47 @@ def _run_job(run_id: str, system_config_dict: Dict[str, Any]) -> None:
         _job_append_event(job, {"event": "error", "message": str(e.detail)})
         job["status"] = "error"
     except Exception as e:
-        _job_append_event(job, {"event": "error", "message": f"Error al ejecutar investigación: {str(e)}"})
+        import traceback
+        error_msg = f"Error al ejecutar investigación: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print(f"[TRACEBACK] {traceback.format_exc()}")
+        _job_append_event(job, {"event": "error", "message": error_msg})
         job["status"] = "error"
 
 
+class InvestigacionConfig(BaseModel):
+    """Modelo de configuración de investigación"""
+    descripcion: str
+    estilo_investigacion: Optional[str] = None
+
+
+class SystemConfig(BaseModel):
+    """Modelo de configuración del sistema"""
+    llm_provider: str
+    temperatura: Optional[float] = None
+    max_tokens: Optional[int] = None
+    modelo_path: Optional[str] = None
+    prompt_perfil: Optional[str] = None
+    prompt_cuestionario: Optional[str] = None
+    prompt_entrevista: Optional[str] = None
+    prompt_sintesis: Optional[str] = None
+    # AnythingLLM
+    anythingllm_base_url: Optional[str] = None
+    anythingllm_api_key: Optional[str] = None
+    anythingllm_workspace_slug: Optional[str] = None
+    anythingllm_mode: Optional[str] = None
+    # Hugging Face
+    huggingface_api_key: Optional[str] = None
+    huggingface_model: Optional[str] = None
+
+
 class JobStartRequest(BaseModel):
-    # Usar anotación como string para evitar NameError por orden de definición
-    system_config: Optional["SystemConfig"] = None
+    system_config: Optional[SystemConfig] = None
+
+
+class IniciarInvestigacionRequest(BaseModel):
+    """Request para iniciar una investigación"""
+    system_config: Optional[SystemConfig] = None
 
 
 @router.post("/job/start")
@@ -260,57 +327,6 @@ def job_cancel(run_id: str):
     return {"status": "success", "run_id": run_id, "job_status": job.get("status")}
 
 
-class InvestigacionConfig(BaseModel):
-    """Modelo de configuración de investigación"""
-    descripcion: str
-    estilo_investigacion: Optional[str] = None
-
-
-class SystemConfig(BaseModel):
-    """Modelo de configuración del sistema"""
-    llm_provider: str
-    temperatura: Optional[float] = None
-    max_tokens: Optional[int] = None
-    modelo_path: Optional[str] = None
-    prompt_perfil: Optional[str] = None
-    prompt_investigacion: Optional[str] = None
-    # AnythingLLM
-    anythingllm_base_url: Optional[str] = None
-    anythingllm_api_key: Optional[str] = None
-    anythingllm_workspace_slug: Optional[str] = None
-    anythingllm_mode: Optional[str] = None
-
-
-class IniciarInvestigacionRequest(BaseModel):
-    """Request para iniciar una investigación"""
-    system_config: Optional[SystemConfig] = None
-
-def _normalize_llm_provider(value: Optional[str]) -> str:
-    """
-    Normaliza valores de proveedor LLM recibidos desde el frontend.
-
-    Históricamente el frontend enviaba etiquetas tipo 'LLaMA Local'.
-    El backend/LLMClient espera 'ollama' (y en el futuro otros).
-    """
-    if not value:
-        return "ollama"
-
-    v = str(value).strip().lower()
-
-    # Valores amigables/legacy del frontend
-    if v in {"llama local", "llama", "l\u200blla\u200bma local"}:
-        return "ollama"
-    if v in {"anythingllm", "anything llm", "anything-llm", "anything_llm"}:
-        return "anythingllm"
-
-    # Valores esperados
-    if v in {"ollama", "llama-cpp-python", "anythingllm"}:
-        return v
-
-    # Fallback conservador
-    return "ollama"
-
-
 @router.post("")
 async def guardar_investigacion(config: InvestigacionConfig):
     """
@@ -320,8 +336,7 @@ async def guardar_investigacion(config: InvestigacionConfig):
         investigaciones_dir = STORAGE_DIR / "investigaciones"
         investigaciones_dir.mkdir(parents=True, exist_ok=True)
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{timestamp}_config.json"
+        filename = "config.json"
         filepath = investigaciones_dir / filename
         
         data = {
@@ -343,29 +358,18 @@ async def guardar_investigacion(config: InvestigacionConfig):
 
 @router.post("/iniciar")
 def iniciar_investigacion(request: IniciarInvestigacionRequest):
-    """
-    Inicia una investigación completa:
-    1. Carga usuario y producto más recientes
-    2. Genera perfil detallado del usuario
-    3. Ejecuta todas las preguntas
-    4. Retorna resultados
-    """
     try:
-        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion = _load_latest_configs()
-        
-        # Configurar LLM client
+        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion, estilo_investigacion = _load_latest_configs()
         system_config_dict = request.system_config.dict() if request.system_config else {}
         llm_client = _build_llm_client(system_config_dict)
         
-        # Ejecutar investigación (resultado único)
-        prompt_investigacion = system_config_dict.get("prompt_investigacion")
-        if not prompt_investigacion:
-            raise HTTPException(
-                status_code=400,
-                detail="Falta 'prompt_investigacion' en la configuración del sistema. Ve a ⚙️ Configuración y guarda la configuración del sistema.",
-            )
-        # Nuevo pipeline por etapas (soporta población y single)
-        plan = build_plan(investigacion_descripcion)
+        # Verificar que los prompts necesarios estén configurados
+        required_prompts = ["prompt_perfil", "prompt_sintesis"]
+        missing_prompts = [p for p in required_prompts if not system_config_dict.get(p)]
+        if missing_prompts:
+            raise HTTPException(status_code=400, detail=f"Faltan prompts: {', '.join(missing_prompts)}")
+
+        plan = build_plan(investigacion_descripcion, estilo_investigacion)
         respondents = [r.model_dump() for r in usuario_cfg_v2.to_effective_respondents()]
 
         engine = MultiResearchEngine(
@@ -375,16 +379,12 @@ def iniciar_investigacion(request: IniciarInvestigacionRequest):
             llm_client=llm_client,
             plan=plan,
             prompt_perfil=system_config_dict.get("prompt_perfil"),
-            prompt_sintesis=prompt_investigacion,
+            prompt_cuestionario=system_config_dict.get("prompt_cuestionario"),
+            prompt_entrevista=system_config_dict.get("prompt_entrevista"),
+            prompt_sintesis=system_config_dict.get("prompt_sintesis"),
         )
         resultados = engine.execute()
-        
-        return {
-            "status": "success",
-            "message": "Investigación completada",
-            "resultados": resultados
-        }
-        
+        return {"status": "success", "message": "Investigación completada", "resultados": resultados}
     except HTTPException:
         raise
     except Exception as e:
@@ -392,109 +392,28 @@ def iniciar_investigacion(request: IniciarInvestigacionRequest):
 
 
 def _sse(data: Dict[str, Any]) -> str:
-    """
-    Server-Sent Events helper.
-    We only emit `data:` lines with JSON payload.
-    """
     payload = json.dumps(data, ensure_ascii=False)
     return f"data: {payload}\n\n"
 
 
 @router.post("/iniciar_stream")
 def iniciar_investigacion_stream(request: IniciarInvestigacionRequest):
-    """
-    Inicia una investigación completa, emitiendo progreso por SSE (text/event-stream).
-
-    La respuesta es un stream de eventos JSON:
-      - {event: "...", message: "...", ...}
-      - Al final: {event: "done", result: { ...resultado final... }}
-    """
     def gen():
-        # ping inicial para que el cliente se enganche rápido
         yield _sse({"event": "start", "message": "Iniciando investigación..."})
         try:
-            # Cargar configuraciones más recientes (igual que /iniciar)
-            usuarios_dir = STORAGE_DIR / "usuarios"
-            productos_dir = STORAGE_DIR / "productos"
-            investigaciones_dir = STORAGE_DIR / "investigaciones"
-
-            usuario_files = list(usuarios_dir.glob("*_config.json"))
-            if not usuario_files:
-                yield _sse({"event": "error", "message": "No hay usuario configurado"})
-                return
-            usuario_file = max(usuario_files, key=lambda p: p.stat().st_mtime)
-            with open(usuario_file, "r", encoding="utf-8") as f:
-                usuario_data = json.load(f)
-            usuario_config_raw = usuario_data.get("config") or {}
-            try:
-                if isinstance(usuario_config_raw, dict) and usuario_config_raw.get("mode") in {"single", "population"}:
-                    usuario_cfg_v2 = UsuarioConfigV2.model_validate(usuario_config_raw)
-                else:
-                    usuario_cfg_v2 = UsuarioConfigV2.from_legacy(usuario_config_raw if isinstance(usuario_config_raw, dict) else {})
-            except ValidationError as e:
-                yield _sse({"event": "error", "message": f"Config de usuario inválida: {e}"})
-                return
-
-            producto_files = list(productos_dir.glob("*_config.json"))
-            if not producto_files:
-                yield _sse({"event": "error", "message": "No hay producto configurado"})
-                return
-            producto_file = max(producto_files, key=lambda p: p.stat().st_mtime)
-            with open(producto_file, "r", encoding="utf-8") as f:
-                producto_data = json.load(f)
-            producto_config = producto_data["config"]
-            if "nombre_producto" not in producto_config:
-                producto_config["nombre_producto"] = "Producto"
-            if "descripcion" not in producto_config:
-                producto_config["descripcion"] = ""
-
-            investigacion_files = list(investigaciones_dir.glob("*_config.json"))
-            if not investigacion_files:
-                yield _sse({"event": "error", "message": "No hay investigación configurada"})
-                return
-            investigacion_file = max(investigacion_files, key=lambda p: p.stat().st_mtime)
-            with open(investigacion_file, "r", encoding="utf-8") as f:
-                investigacion_data = json.load(f)
-            investigacion_config = investigacion_data.get("config", {})
-            investigacion_descripcion = investigacion_config.get("descripcion", "")
-            if not isinstance(investigacion_descripcion, str) or not investigacion_descripcion.strip():
-                yield _sse({"event": "error", "message": "La investigación debe incluir una descripción"})
-                return
-            estilo = investigacion_config.get("estilo_investigacion") if isinstance(investigacion_config, dict) else None
-            if isinstance(estilo, str) and estilo.strip():
-                investigacion_descripcion = f"Estilo de investigación: {estilo.strip()}\n\n{investigacion_descripcion}"
-
-            # Configurar LLM client
+            usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion, estilo_investigacion = _load_latest_configs()
             system_config_dict = request.system_config.dict() if request.system_config else {}
-            normalized_provider = _normalize_llm_provider(system_config_dict.get("llm_provider"))
-            llm_config = {
-                "provider": normalized_provider,
-                "temperature": system_config_dict.get("temperatura", 0.7),
-                "max_tokens": system_config_dict.get("max_tokens", 1000),
-            }
-            if normalized_provider == "anythingllm":
-                workspace_slug = system_config_dict.get("anythingllm_workspace_slug")
-                mode = str(system_config_dict.get("anythingllm_mode") or "chat").strip().lower()
-                if mode != "chat":
-                    mode = "chat"
-                llm_config.update({
-                    "base_url": system_config_dict.get("anythingllm_base_url"),
-                    "api_key": system_config_dict.get("anythingllm_api_key"),
-                    "workspace_slug": workspace_slug,
-                    "mode": mode,
-                })
-            llm_client = LLMClient(provider="llama", config=llm_config)
+            llm_client = _build_llm_client(system_config_dict)
 
-            prompt_investigacion = system_config_dict.get("prompt_investigacion")
-            if not prompt_investigacion:
-                yield _sse({
-                    "event": "error",
-                    "message": "Falta 'prompt_investigacion' en la configuración del sistema. Ve a ⚙️ Configuración y guarda la configuración del sistema.",
-                })
+            # Verificar prompts necesarios
+            required_prompts = ["prompt_perfil", "prompt_sintesis"]
+            missing_prompts = [p for p in required_prompts if not system_config_dict.get(p)]
+            if missing_prompts:
+                yield _sse({"event": "error", "message": f"Faltan prompts: {', '.join(missing_prompts)}"})
                 return
 
             yield _sse({"event": "planning", "message": "Preparando plan..."})
-            plan = build_plan(investigacion_descripcion)
+            plan = build_plan(investigacion_descripcion, estilo_investigacion)
             respondents = [r.model_dump() for r in usuario_cfg_v2.to_effective_respondents()]
             yield _sse({"event": "planning_done", "message": f"Plan listo. Respondientes: {len(respondents)}."})
 
@@ -510,10 +429,9 @@ def iniciar_investigacion_stream(request: IniciarInvestigacionRequest):
 
             for ev in engine.execute_stream():
                 yield _sse(ev if isinstance(ev, dict) else {"event": "progress", "message": str(ev)})
-                # pequeño flush-friendly delay (evita que algunos proxys agrupen demasiado)
                 time.sleep(0.001)
 
         except Exception as e:
-            yield _sse({"event": "error", "message": f"Error al ejecutar investigación: {str(e)}"})
+            yield _sse({"event": "error", "message": f"Error: {str(e)}"})
 
     return StreamingResponse(gen(), media_type="text/event-stream")

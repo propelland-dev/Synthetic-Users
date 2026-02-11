@@ -19,7 +19,10 @@ async def verificar_ollama() -> Dict[str, Any]:
     Verifica el estado de la conexión con Ollama
     """
     try:
-        llm_client = LLMClient(provider="llama", config=LLAMA_CONFIG)
+        # Forzar el provider a ollama para esta verificación específica
+        ollama_config = dict(LLAMA_CONFIG)
+        ollama_config["provider"] = "ollama"
+        llm_client = LLMClient(provider="llama", config=ollama_config)
         status = llm_client.check_connection()
         return status
     except Exception as e:
@@ -34,6 +37,9 @@ class LLMStatusRequest(BaseModel):
     anythingllm_api_key: Optional[str] = None
     anythingllm_workspace_slug: Optional[str] = None
     anythingllm_mode: Optional[str] = None
+    # Hugging Face
+    huggingface_api_key: Optional[str] = None
+    huggingface_model: Optional[str] = None
 
 
 @router.post("/status")
@@ -58,6 +64,14 @@ async def verificar_llm(request: LLMStatusRequest) -> Dict[str, Any]:
                 "workspace_slug": request.anythingllm_workspace_slug,
                 "mode": mode,
             }
+        elif provider == "huggingface":
+            llm_config = {
+                "provider": "huggingface",
+                "model": request.huggingface_model,
+            }
+            # Solo enviar api_key si se proporcionó explícitamente (ahora se prefiere .env)
+            if request.huggingface_api_key:
+                llm_config["api_key"] = request.huggingface_api_key
         else:
             llm_config = dict(LLAMA_CONFIG)
             llm_config["provider"] = "ollama"

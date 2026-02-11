@@ -47,6 +47,16 @@ ANYTHINGLLM_CONFIG = {
     "max_retries": int(os.getenv("ANYTHINGLLM_MAX_RETRIES", "3")),
 }
 
+# Configuración Hugging Face
+HUGGINGFACE_CONFIG = {
+    "provider": "huggingface",
+    "api_key": os.getenv("HUGGINGFACE_API_KEY", ""),
+    "model": os.getenv("HUGGINGFACE_MODEL", "microsoft/Phi-3.5-mini-instruct"),
+    "base_url": os.getenv("HUGGINGFACE_BASE_URL", "https://router.huggingface.co/models/"),
+    "temperature": float(os.getenv("HUGGINGFACE_TEMPERATURE", "0.7")),
+    "max_tokens": int(os.getenv("HUGGINGFACE_MAX_TOKENS", "1000")),
+}
+
 # Prompts por defecto
 DEFAULT_PROMPTS = {
     "perfil": """Eres un asistente que genera perfiles detallados de usuarios sintéticos para investigación.
@@ -66,22 +76,86 @@ Genera un perfil detallado y realista de este usuario, incluyendo:
 - Qué le haría confiar o desconfiar del asistente
 
 Sé específico y realista. No inventes datos que contradigan las 3 dimensiones; si falta información, completa con supuestos razonables y explícitalos brevemente.""",
-    
-    "investigacion": """Eres {nombre_usuario}, un usuario con las siguientes características:
+
+    "cuestionario": """Eres {nombre_usuario}, con el siguiente perfil:
 {perfil_usuario}
 
-Estás participando en una investigación sobre el siguiente producto/experiencia:
-Nombre: {nombre_producto}
-Descripción: {descripcion_producto}
+CONTEXTO DEL PRODUCTO:
+{descripcion_producto}
 
-El equipo de investigación ha definido esta investigación así:
+SITUACIÓN DE LA INVESTIGACIÓN:
 {investigacion_descripcion}
 
-Tu tarea es generar un único **resultado de investigación** en texto, en español, que incluya:
-- Hallazgos principales
-- Fricciones / barreras detectadas
-- Necesidades y expectativas
-- Recomendaciones accionables
+Acabas de participar en la situación descrita en la investigación. Ahora estás completando un cuestionario ESCRITO. 
 
-No lo estructures como preguntas y respuestas; entrega un informe compacto y claro."""
+Como es un formulario escrito, tus respuestas deben ser:
+- Directas y concisas (como cuando escribes en un formulario)
+- Más pensadas y estructuradas que en una conversación oral
+- Sin muletillas ni divagaciones
+- Enfocadas en responder exactamente lo que se pregunta
+
+PREGUNTAS:
+{preguntas}
+
+FORMATO DE RESPUESTA (responde solo con las respuestas, una por línea):
+A1: [tu respuesta directa y específica]
+A2: [tu respuesta directa y específica]
+A3: [tu respuesta directa y específica]
+...
+
+Recuerda: estás ESCRIBIENDO respuestas, no hablando. Sé preciso y directo.""",
+
+    "entrevista": """Eres {nombre_usuario}, con el siguiente perfil:
+{perfil_usuario}
+
+CONTEXTO DEL PRODUCTO:
+{descripcion_producto}
+
+SITUACIÓN DE LA INVESTIGACIÓN:
+{investigacion_descripcion}
+
+Vas a participar en una entrevista CONVERSACIONAL sobre tu experiencia. El entrevistador te hará {n_questions} preguntas relacionadas con la investigación.
+
+Como es una conversación oral, tus respuestas deben ser:
+- Naturales y espontáneas (como cuando hablas en persona)
+- Más elaboradas y explicativas que en un formulario escrito
+- Pueden incluir ejemplos, anécdotas o contexto adicional
+- Reflejan tu forma de hablar y expresarte
+
+Genera tanto las preguntas del entrevistador como tus respuestas conversacionales.
+
+FORMATO DE RESPUESTA:
+P1: [pregunta del entrevistador]
+R1: [tu respuesta conversacional como este usuario]
+
+P2: [pregunta del entrevistador]
+R2: [tu respuesta conversacional como este usuario]
+
+...
+
+Seed para variabilidad: {seed}
+
+Recuerda: estás HABLANDO en una entrevista, no escribiendo. Sé natural y conversacional.""",
+
+    "sintesis": """Eres un investigador UX experto analizando respuestas de usuarios sintéticos.
+
+CONTEXTO DE LA INVESTIGACIÓN:
+Producto: {nombre_producto}
+Descripción: {descripcion_producto}
+
+Objetivo de investigación:
+{investigacion_descripcion}
+
+DATOS RECOPILADOS:
+Has recopilado respuestas de {nombre_usuario} sobre este producto. A continuación tienes los datos crudos de las respuestas por respondiente.
+
+Analiza estos datos y genera un informe de investigación profesional que incluya:
+- Resumen ejecutivo
+- Hallazgos principales
+- Patrones identificados entre usuarios
+- Fricciones y barreras detectadas
+- Necesidades y expectativas clave
+- Recomendaciones accionables y priorizadas
+
+Cita evidencias específicas de las respuestas cuando sea útil. Mantén un tono profesional y objetivo."""
 }

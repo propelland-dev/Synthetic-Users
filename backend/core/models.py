@@ -177,26 +177,19 @@ class UsuarioConfigV2(BaseModel):
 # ResearchPlan (planner output)
 # -----------------------
 
-ResearchStepType = Literal["survey", "interview", "behavior_sim"]
-ResearchType = Literal["survey", "interview", "behavior_sim", "mixed"]
+ResearchStepType = Literal["cuestionario", "entrevista"]
+ResearchType = Literal["cuestionario", "entrevista", "mixed"]
 
 
-class SurveyStep(BaseModel):
-    type: Literal["survey"] = "survey"
+class CuestionarioStep(BaseModel):
+    type: Literal["cuestionario"] = "cuestionario"
     questions: List[str] = Field(default_factory=list)
 
 
-class InterviewStep(BaseModel):
-    type: Literal["interview"] = "interview"
+class EntrevistaStep(BaseModel):
+    type: Literal["entrevista"] = "entrevista"
     # Entrevista en un solo turno (una sola llamada) por respondiente.
-    # `questions` es opcional: si viene vacío, el motor genera preguntas implícitas.
     n_questions: int = Field(default=6, ge=1)
-    questions: List[str] = Field(default_factory=list)
-
-
-class BehaviorSimStep(BaseModel):
-    type: Literal["behavior_sim"] = "behavior_sim"
-    scenarios: List[str] = Field(default_factory=list)
 
 
 class ResearchPlan(BaseModel):
