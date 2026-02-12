@@ -51,7 +51,7 @@ def _job_append_event(job: Dict[str, Any], ev: Dict[str, Any]) -> None:
     if not isinstance(job, dict):
         return
     lock = job.get("lock")
-    if not isinstance(lock, threading.Lock):
+    if lock is None:
         # create if missing
         lock = threading.Lock()
         job["lock"] = lock
@@ -316,7 +316,7 @@ def job_events(run_id: str, cursor: int = 0):
     if not job:
         raise HTTPException(status_code=404, detail="run_id no encontrado")
     lock = job.get("lock")
-    if not isinstance(lock, threading.Lock):
+    if lock is None:
         lock = threading.Lock()
         job["lock"] = lock
     with lock:
