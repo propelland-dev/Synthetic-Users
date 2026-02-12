@@ -42,12 +42,14 @@ class MultiResearchEngine:
         prompt_sintesis: Optional[str] = None,
         investigacion_objetivo: Optional[str] = "",
         investigacion_preguntas: Optional[str] = "",
+        estilo_investigacion: Optional[str] = None,
     ):
         self.respondents = respondents
         self.producto = producto
         self.investigacion_descripcion = investigacion_descripcion
         self.investigacion_objetivo = investigacion_objetivo or ""
         self.investigacion_preguntas = investigacion_preguntas or ""
+        self.estilo_investigacion = estilo_investigacion
         # Usamos `llm_client` como "prototipo" de configuración.
         # Para evitar compartir estado entre respondientes (p.ej. throttling/estado interno),
         # creamos instancias nuevas para cada respondiente y otra para la síntesis final.
@@ -262,6 +264,7 @@ class MultiResearchEngine:
                 "descripcion": self.investigacion_descripcion,
                 "objetivo": self.investigacion_objetivo,
                 "preguntas": self.investigacion_preguntas,
+                "estilo_investigacion": self.estilo_investigacion,
             },
             "resultado": resultado_texto,
             "plan": self.plan,
@@ -464,6 +467,7 @@ class MultiResearchEngine:
                 "descripcion": self.investigacion_descripcion,
                 "objetivo": self.investigacion_objetivo,
                 "preguntas": self.investigacion_preguntas,
+                "estilo_investigacion": self.estilo_investigacion,
             },
             "resultado": resultado_texto,
             "plan": self.plan,

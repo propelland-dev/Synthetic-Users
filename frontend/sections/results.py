@@ -116,7 +116,7 @@ def _build_result_pdf_bytes(resultados: dict) -> bytes:
         mix_text = "1 (Usuario único)"
 
     mc(f"Producto: {producto.get('nombre_producto', 'N/A')}", h=6, size=11)
-    mc(f"Estilo de investigación: {investigacion.get('nombre_investigacion', 'N/A')}", h=6, size=11)
+    mc(f"Estilo de investigación: {investigacion.get('estilo_investigacion', 'N/A')}", h=6, size=11)
     mc(f"Población: {mix_text}", h=6, size=11)
     
     pdf.ln(2)
@@ -185,7 +185,7 @@ def render_resultados():
 
             info_box = f"""
             **Producto:** {producto.get('nombre_producto', 'N/A')}  
-            **Estilo de investigación:** {investigacion.get('nombre_investigacion', 'N/A')}  
+            **Estilo de investigación:** {investigacion.get('estilo_investigacion', 'N/A')}  
             **Población:** {mix_text}
             """
             st.info(info_box)
