@@ -196,6 +196,10 @@ Este usuario se define por:
 - Comportamiento: {comportamiento}
 - Necesidades del asistente: {necesidades}
 - Barreras típicas de adopción: {barreras}
+- Edad: {edad}
+- Género: {genero}
+- Adopción tecnológica: {adopcion_tecnologica}
+- Profesión: {profesion}
 
 Genera un perfil detallado y realista de este usuario, incluyendo:
 - Nombre ficticio (uno)
@@ -205,13 +209,13 @@ Genera un perfil detallado y realista de este usuario, incluyendo:
 - Cómo toma decisiones y valida información
 - Qué le haría confiar o desconfiar del asistente
 
-Sé específico y realista. No inventes datos que contradigan las 3 dimensiones; si falta información, completa con supuestos razonables y explícitalos brevemente."""
+Sé específico y realista. No inventes datos que contradigan las dimensiones proporcionadas; si falta información, completa con supuestos razonables y explícitalos brevemente."""
     
     # Si existe un prompt guardado antiguo (con {edad}/{genero}/etc), usamos el nuevo por defecto
     prompt_perfil_guardado = config_cargada.get("prompt_perfil") if config_cargada else None
     if isinstance(prompt_perfil_guardado, str):
         legacy_markers = ["{edad}", "{genero}", "{ubicacion}", "{experiencia_tecnologica}", "{intereses}"]
-        new_markers = ["{arquetipo}", "{comportamiento}", "{necesidades}", "{barreras}"]
+        new_markers = ["{arquetipo}", "{comportamiento}", "{necesidades}", "{barreras}", "{adopcion_tecnologica}", "{profesion}"]
         is_legacy = any(m in prompt_perfil_guardado for m in legacy_markers) and not any(m in prompt_perfil_guardado for m in new_markers)
     else:
         is_legacy = False
@@ -220,7 +224,7 @@ Sé específico y realista. No inventes datos que contradigan las 3 dimensiones;
         "Prompt para generar perfil de usuario sintético",
         value=(prompt_perfil_default if is_legacy else (prompt_perfil_guardado or prompt_perfil_default)),
         height=200,
-        help="Variables disponibles: {arquetipo}, {comportamiento}, {necesidades}, {barreras}, {edad}, {genero}",
+        help="Variables disponibles: {arquetipo}, {comportamiento}, {necesidades}, {barreras}, {edad}, {genero}, {adopcion_tecnologica}, {profesion}",
         key="system_prompt_perfil",
     )
     
@@ -258,7 +262,7 @@ Recuerda: estás ESCRIBIENDO respuestas, no hablando. Sé preciso y directo."""
         "Prompt para responder cuestionarios estructurados",
         value=(config_cargada.get("prompt_cuestionario") or prompt_cuestionario_default) if config_cargada else prompt_cuestionario_default,
         height=200,
-        help="Variables disponibles: {nombre_usuario}, {perfil_usuario}, {descripcion_producto}, {investigacion_descripcion}, {preguntas}",
+        help="Variables disponibles: {nombre_usuario}, {perfil_usuario}, {descripcion_producto}, {investigacion_descripcion}, {investigacion_objetivo}, {investigacion_preguntas}, {preguntas}",
         key="system_prompt_cuestionario",
     )
 
@@ -300,7 +304,7 @@ Recuerda: estás HABLANDO en una entrevista, no escribiendo. Sé natural y conve
         "Prompt para simular entrevistas conversacionales",
         value=(config_cargada.get("prompt_entrevista") or prompt_entrevista_default) if config_cargada else prompt_entrevista_default,
         height=200,
-        help="Variables disponibles: {nombre_usuario}, {perfil_usuario}, {descripcion_producto}, {investigacion_descripcion}, {n_questions}, {seed}",
+        help="Variables disponibles: {nombre_usuario}, {perfil_usuario}, {descripcion_producto}, {investigacion_descripcion}, {investigacion_objetivo}, {investigacion_preguntas}, {n_questions}, {seed}",
         key="system_prompt_entrevista",
     )
 
@@ -312,8 +316,10 @@ CONTEXTO DE LA INVESTIGACIÓN:
 Producto: {nombre_producto}
 Descripción: {descripcion_producto}
 
-Objetivo de investigación:
-{investigacion_descripcion}
+DATOS DE INVESTIGACIÓN:
+- Descripción: {investigacion_descripcion}
+- Objetivo: {investigacion_objetivo}
+- Preguntas clave: {investigacion_preguntas}
 
 DATOS RECOPILADOS:
 Has recopilado respuestas de {nombre_usuario} sobre este producto. A continuación tienes los datos crudos de las respuestas por respondiente.
@@ -332,7 +338,7 @@ Cita evidencias específicas de las respuestas cuando sea útil. Mantén un tono
         "Prompt para generar síntesis final de investigación",
         value=(config_cargada.get("prompt_sintesis") or prompt_sintesis_default) if config_cargada else prompt_sintesis_default,
         height=200,
-        help="Variables disponibles: {nombre_usuario}, {nombre_producto}, {descripcion_producto}, {investigacion_descripcion}",
+        help="Variables disponibles: {nombre_usuario}, {nombre_producto}, {descripcion_producto}, {investigacion_descripcion}, {investigacion_objetivo}, {investigacion_preguntas}",
         key="system_prompt_sintesis",
     )
 

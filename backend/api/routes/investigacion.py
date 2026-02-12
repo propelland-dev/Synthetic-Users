@@ -63,10 +63,10 @@ def _job_append_event(job: Dict[str, Any], ev: Dict[str, Any]) -> None:
         events.append(ev)
 
 
-def _load_latest_configs() -> tuple[UsuarioConfigV2, Dict[str, Any], Dict[str, Any], str, str]:
+def _load_latest_configs() -> tuple[UsuarioConfigV2, Dict[str, Any], Dict[str, Any], str, str, str, str]:
     """
     Load latest user/product/research configs from storage.
-    Returns: (usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion, estilo_investigacion)
+    Returns: (usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion, estilo_investigacion, investigacion_objetivo, investigacion_preguntas)
     """
     usuarios_dir = STORAGE_DIR / "usuarios"
     productos_dir = STORAGE_DIR / "productos"
@@ -114,14 +114,21 @@ def _load_latest_configs() -> tuple[UsuarioConfigV2, Dict[str, Any], Dict[str, A
     
     investigacion_config = investigacion_data.get("config", {}) or {}
     investigacion_descripcion = investigacion_config.get("descripcion", "")
-    if not isinstance(investigacion_descripcion, str) or not investigacion_descripcion.strip():
-        raise HTTPException(status_code=400, detail="La investigación debe incluir una descripción")
+    investigacion_objetivo = investigacion_config.get("objetivo", "")
+    investigacion_preguntas = investigacion_config.get("preguntas", "")
+
+    if not any([
+        isinstance(investigacion_descripcion, str) and investigacion_descripcion.strip(),
+        isinstance(investigacion_objetivo, str) and investigacion_objetivo.strip(),
+        isinstance(investigacion_preguntas, str) and investigacion_preguntas.strip()
+    ]):
+        raise HTTPException(status_code=400, detail="La investigación debe incluir al menos una descripción, objetivo o preguntas")
     
     estilo_investigacion = investigacion_config.get("estilo_investigacion", "Entrevista")
     if not isinstance(estilo_investigacion, str) or estilo_investigacion.strip() not in ["Cuestionario", "Entrevista"]:
         estilo_investigacion = "Entrevista"
 
-    return usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion, estilo_investigacion
+    return usuario_cfg_v2, producto_config, investigacion_config, investigacion_descripcion, estilo_investigacion, investigacion_objetivo, investigacion_preguntas
 
 
 def _normalize_llm_provider(value: Optional[str]) -> str:
@@ -180,7 +187,7 @@ def _run_job(run_id: str, system_config_dict: Dict[str, Any]) -> None:
 
     try:
         _job_append_event(job, {"event": "start", "message": "Iniciando investigación..."})
-        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion, estilo_investigacion = _load_latest_configs()
+        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion, estilo_investigacion, investigacion_objetivo, investigacion_preguntas = _load_latest_configs()
 
         # Verificar que los prompts necesarios estén configurados
         required_prompts = ["prompt_perfil", "prompt_sintesis"]
@@ -206,6 +213,8 @@ def _run_job(run_id: str, system_config_dict: Dict[str, Any]) -> None:
             respondents=respondents,
             producto=producto_config,
             investigacion_descripcion=investigacion_descripcion,
+            investigacion_objetivo=investigacion_objetivo,
+            investigacion_preguntas=investigacion_preguntas,
             llm_client=llm_client,
             plan=plan,
             prompt_perfil=system_config_dict.get("prompt_perfil"),
@@ -246,6 +255,8 @@ def _run_job(run_id: str, system_config_dict: Dict[str, Any]) -> None:
 class InvestigacionConfig(BaseModel):
     """Modelo de configuración de investigación"""
     descripcion: str
+    objetivo: Optional[str] = ""
+    preguntas: Optional[str] = ""
     estilo_investigacion: Optional[str] = None
 
 
@@ -359,7 +370,7 @@ async def guardar_investigacion(config: InvestigacionConfig):
 @router.post("/iniciar")
 def iniciar_investigacion(request: IniciarInvestigacionRequest):
     try:
-        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion, estilo_investigacion = _load_latest_configs()
+        usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion, estilo_investigacion, investigacion_objetivo, investigacion_preguntas = _load_latest_configs()
         system_config_dict = request.system_config.dict() if request.system_config else {}
         llm_client = _build_llm_client(system_config_dict)
         
@@ -376,6 +387,8 @@ def iniciar_investigacion(request: IniciarInvestigacionRequest):
             respondents=respondents,
             producto=producto_config,
             investigacion_descripcion=investigacion_descripcion,
+            investigacion_objetivo=investigacion_objetivo,
+            investigacion_preguntas=investigacion_preguntas,
             llm_client=llm_client,
             plan=plan,
             prompt_perfil=system_config_dict.get("prompt_perfil"),
@@ -401,7 +414,7 @@ def iniciar_investigacion_stream(request: IniciarInvestigacionRequest):
     def gen():
         yield _sse({"event": "start", "message": "Iniciando investigación..."})
         try:
-            usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion, estilo_investigacion = _load_latest_configs()
+            usuario_cfg_v2, producto_config, _inv_cfg, investigacion_descripcion, estilo_investigacion, investigacion_objetivo, investigacion_preguntas = _load_latest_configs()
             system_config_dict = request.system_config.dict() if request.system_config else {}
             llm_client = _build_llm_client(system_config_dict)
 
@@ -421,10 +434,12 @@ def iniciar_investigacion_stream(request: IniciarInvestigacionRequest):
                 respondents=respondents,
                 producto=producto_config,
                 investigacion_descripcion=investigacion_descripcion,
+                investigacion_objetivo=investigacion_objetivo,
+                investigacion_preguntas=investigacion_preguntas,
                 llm_client=llm_client,
                 plan=plan,
                 prompt_perfil=system_config_dict.get("prompt_perfil"),
-                prompt_sintesis=prompt_investigacion,
+                prompt_sintesis=system_config_dict.get("prompt_sintesis"),
             )
 
             for ev in engine.execute_stream():

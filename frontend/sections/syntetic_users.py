@@ -9,6 +9,21 @@ from utils import cargar_config, existe_config
 
 ARQUETIPOS_PATH = Path(__file__).parent.parent / "configs" / "arquetipos.json"
 
+OPCIONES_ADOPCION = [
+    "Innovadores – prueban tecnologías muy nuevas, incluso experimentales.",
+    "Early adopters – adoptan pronto cuando la tecnología ya es viable; suelen influir en otros.",
+    "Mayoría temprana – adoptan cuando la tecnología está más probada.",
+    "Mayoría tardía – adoptan por necesidad o cuando ya es estándar.",
+    "Rezagados / baja adopción – evitan el cambio tecnológico o lo adoptan muy tarde."
+]
+
+OPCIONES_PROFESION = [
+    "Operario",
+    "Ingeniero",
+    "Administrativo",
+    "Dirección"
+]
+
 def _cargar_arquetipos():
     try:
         with open(ARQUETIPOS_PATH, "r", encoding="utf-8") as f:
@@ -137,15 +152,59 @@ def render_usuarios_sinteticos():
             placeholder="Qué le frena, qué le hace desconfiar, qué haría que abandone...",
         )
 
+        with st.expander("Variabilidad (Demografía y Tecnología)", expanded=False):
+            st.checkbox(
+                "Aplicar parámetros demográficos y tecnológicos",
+                key="usuario_single_demo_enabled",
+                value=st.session_state.get("usuario_single_demo_enabled", False)
+            )
+            
+            if st.session_state.get("usuario_single_demo_enabled"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    if "usuario_single_edad" not in st.session_state:
+                        st.session_state["usuario_single_edad"] = int(single_saved.get("edad", 35)) if single_saved.get("edad") else 35
+                    st.number_input("Edad", min_value=0, max_value=120, key="usuario_single_edad")
+                with col2:
+                    if "usuario_single_genero" not in st.session_state:
+                        st.session_state["usuario_single_genero"] = single_saved.get("genero", "Mujer")
+                    st.selectbox("Género", options=["Mujer", "Hombre", "No binario", "Prefiero no decirlo"], key="usuario_single_genero")
+                
+                if "usuario_single_adopcion" not in st.session_state:
+                    saved_adop = single_saved.get("adopcion_tecnologica")
+                    st.session_state["usuario_single_adopcion"] = saved_adop if saved_adop in OPCIONES_ADOPCION else OPCIONES_ADOPCION[2]
+                st.selectbox(
+                    "Adopción tecnológica",
+                    options=OPCIONES_ADOPCION,
+                    key="usuario_single_adopcion"
+                )
+                
+                if "usuario_single_profesion" not in st.session_state:
+                    saved_prof = single_saved.get("profesion")
+                    st.session_state["usuario_single_profesion"] = saved_prof if saved_prof in OPCIONES_PROFESION else OPCIONES_PROFESION[0]
+                st.selectbox(
+                    "Profesión",
+                    options=OPCIONES_PROFESION,
+                    key="usuario_single_profesion"
+                )
+
         # Mantener config en sesión siempre actualizada (se persistirá al cambiar de página)
+        single_config = {
+            "arquetipo": arquetipo,
+            "comportamiento": st.session_state.get("usuario_comportamiento", "") or "",
+            "necesidades": st.session_state.get("usuario_necesidades", "") or "",
+            "barreras": st.session_state.get("usuario_barreras", "") or "",
+        }
+        
+        if st.session_state.get("usuario_single_demo_enabled"):
+            single_config["edad"] = st.session_state.get("usuario_single_edad")
+            single_config["genero"] = st.session_state.get("usuario_single_genero")
+            single_config["adopcion_tecnologica"] = st.session_state.get("usuario_single_adopcion")
+            single_config["profesion"] = st.session_state.get("usuario_single_profesion")
+
         st.session_state["usuario_config"] = {
             "mode": "single",
-            "single": {
-                "arquetipo": arquetipo,
-                "comportamiento": st.session_state.get("usuario_comportamiento", "") or "",
-                "necesidades": st.session_state.get("usuario_necesidades", "") or "",
-                "barreras": st.session_state.get("usuario_barreras", "") or "",
-            },
+            "single": single_config,
         }
 
         # Acciones
@@ -190,38 +249,59 @@ def render_usuarios_sinteticos():
         hi = int(demo_saved.get("edad_max", 55)) if str(demo_saved.get("edad_max", "")).isdigit() else 55
         st.session_state["usuario_edad_range"] = (min(lo, hi), max(lo, hi))
     if "usuario_ratio_hombres" not in st.session_state:
-        # Nuevo: ratio_hombres es fracción 0..1 (0 solo mujeres, 1 solo hombres)
         try:
             v = float(demo_saved.get("ratio_hombres", 0.5))
         except Exception:
             v = 0.5
-        # Compat legacy: si venía como partes (>1), aproximamos a 0.5 hasta que el usuario lo ajuste
         if v > 1.0:
             v = 0.5
         st.session_state["usuario_ratio_hombres"] = v
 
-    with st.expander("Variabilidad (edad y género)", expanded=False):
+    with st.expander("Variabilidad (Demografía y Tecnología)", expanded=False):
         st.checkbox(
-            "Aplicar variabilidad demográfica a la población",
+            "Aplicar variabilidad demográfica y tecnológica a la población",
             key="usuario_demo_enabled",
-            help="Asignará edad aleatoria dentro del rango y género según el ratio Mujeres:Hombres.",
+            help="Asignará edad aleatoria, género, adopción tecnológica y profesión según los parámetros seleccionados.",
         )
-        st.slider(
-            "Rango de edad",
-            min_value=0,
-            max_value=120,
-            value=st.session_state["usuario_edad_range"],
-            step=1,
-            key="usuario_edad_range",
-        )
-        st.slider(
-            "Ratio de hombres (0 → solo mujeres, 1 → solo hombres)",
-            min_value=0.0,
-            max_value=1.0,
-            value=float(st.session_state.get("usuario_ratio_hombres") or 0.5),
-            step=0.1,
-            key="usuario_ratio_hombres",
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            st.slider(
+                "Rango de edad",
+                min_value=0,
+                max_value=80,
+                step=1,
+                key="usuario_edad_range",
+            )
+        with col2:
+            st.slider(
+                "Ratio Genero (0 → solo mujeres, 1 → solo hombres)",
+                min_value=0.0,
+                max_value=1.0,
+                step=0.1,
+                key="usuario_ratio_hombres",
+            )
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            if "usuario_population_adopcion" not in st.session_state:
+                saved_adop = demo_saved.get("adopcion_tecnologica")
+                st.session_state["usuario_population_adopcion"] = saved_adop if saved_adop in OPCIONES_ADOPCION else "(Aleatorio)"
+            st.selectbox(
+                "Adopción tecnológica",
+                options=["(Aleatorio)"] + OPCIONES_ADOPCION,
+                key="usuario_population_adopcion",
+                help="Selecciona un nivel fijo para toda la población o deja en Aleatorio."
+            )
+        with col4:
+            if "usuario_population_profesion" not in st.session_state:
+                saved_prof = demo_saved.get("profesion")
+                st.session_state["usuario_population_profesion"] = saved_prof if saved_prof in OPCIONES_PROFESION else "(Aleatorio)"
+            st.selectbox(
+                "Profesión",
+                options=["(Aleatorio)"] + OPCIONES_PROFESION,
+                key="usuario_population_profesion",
+                help="Selecciona una profesión fija para toda la población o deja en Aleatorio."
+            )
 
     if "usuario_population_rows" not in st.session_state:
         # Normalizar filas guardadas
@@ -352,6 +432,14 @@ def render_usuarios_sinteticos():
             "edad_max": hi_i,
             "ratio_hombres": rh,
         }
+        
+        adopcion = st.session_state.get("usuario_population_adopcion")
+        if adopcion and adopcion != "(Aleatorio)":
+            demografia["adopcion_tecnologica"] = adopcion
+            
+        profesion = st.session_state.get("usuario_population_profesion")
+        if profesion and profesion != "(Aleatorio)":
+            demografia["profesion"] = profesion
 
     st.session_state["usuario_config"] = {
         "mode": "population",

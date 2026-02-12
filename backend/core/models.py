@@ -28,6 +28,8 @@ class UsuarioDemografia(BaseModel):
     # 0.0 => solo mujeres, 1.0 => solo hombres
     # Compatibilidad: también aceptamos valores legacy tipo "partes" (p.ej. 1,2,3...) y los interpretamos junto a ratio_mujeres si existe.
     ratio_hombres: float = Field(default=0.5, ge=0.0, le=100.0)
+    adopcion_tecnologica: Optional[str] = None
+    profesion: Optional[str] = None
 
     model_config = {"extra": "allow"}
 
@@ -40,6 +42,8 @@ class UsuarioSingle(BaseModel):
     # Opcional: se puede usar en prompts (p.ej. {edad}, {genero})
     edad: Optional[int] = None
     genero: Optional[str] = None
+    adopcion_tecnologica: Optional[str] = None
+    profesion: Optional[str] = None
 
 
 class UsuarioPopulationMixEntry(BaseModel):
@@ -169,6 +173,12 @@ class UsuarioConfigV2(BaseModel):
                 # Género según lista (si aplica)
                 if genders:
                     r.genero = genders[i] if i < len(genders) else None
+                
+                # Nuevos campos: Adopción tecnológica y Profesión
+                if d.adopcion_tecnologica:
+                    r.adopcion_tecnologica = d.adopcion_tecnologica
+                if d.profesion:
+                    r.profesion = d.profesion
 
         return respondents
 

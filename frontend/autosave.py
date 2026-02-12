@@ -86,6 +86,13 @@ def build_usuario_config_from_state() -> Dict[str, Any]:
             rh = max(0.0, min(1.0, rh))
             demografia = {"edad_min": lo, "edad_max": hi, "ratio_hombres": rh}
 
+            adopcion = st.session_state.get("usuario_population_adopcion")
+            if adopcion and adopcion != "(Aleatorio)":
+                demografia["adopcion_tecnologica"] = adopcion
+            profesion = st.session_state.get("usuario_population_profesion")
+            if profesion and profesion != "(Aleatorio)":
+                demografia["profesion"] = profesion
+
         return {"mode": "population", "population": {"n": int(n), "mix": mix_out, "demografia": demografia}}
 
     # mode == single
@@ -93,14 +100,23 @@ def build_usuario_config_from_state() -> Dict[str, Any]:
     comportamiento = st.session_state.get("usuario_comportamiento") or ""
     necesidades = st.session_state.get("usuario_necesidades") or ""
     barreras = st.session_state.get("usuario_barreras") or ""
+    
+    single_config = {
+        "arquetipo": str(arquetipo),
+        "comportamiento": str(comportamiento),
+        "necesidades": str(necesidades),
+        "barreras": str(barreras),
+    }
+
+    if st.session_state.get("usuario_single_demo_enabled"):
+        single_config["edad"] = st.session_state.get("usuario_single_edad")
+        single_config["genero"] = st.session_state.get("usuario_single_genero")
+        single_config["adopcion_tecnologica"] = st.session_state.get("usuario_single_adopcion")
+        single_config["profesion"] = st.session_state.get("usuario_single_profesion")
+
     return {
         "mode": "single",
-        "single": {
-            "arquetipo": str(arquetipo),
-            "comportamiento": str(comportamiento),
-            "necesidades": str(necesidades),
-            "barreras": str(barreras),
-        },
+        "single": single_config,
     }
 
 
@@ -174,8 +190,15 @@ def build_investigacion_config_from_state() -> Dict[str, Any]:
         return dict(local)
 
     estilo = st.session_state.get("investigacion_estilo") or ""
-    descripcion = st.session_state.get("investigacion_descripcion")
-    cfg: Dict[str, Any] = {"descripcion": str(descripcion or "")}
+    descripcion = st.session_state.get("investigacion_descripcion") or ""
+    objetivo = st.session_state.get("investigacion_objetivo") or ""
+    preguntas = st.session_state.get("investigacion_preguntas") or ""
+    
+    cfg: Dict[str, Any] = {
+        "descripcion": str(descripcion),
+        "objetivo": str(objetivo),
+        "preguntas": str(preguntas),
+    }
     if isinstance(estilo, str) and estilo.strip():
         cfg["estilo_investigacion"] = estilo.strip()
     return cfg
@@ -193,7 +216,7 @@ def build_system_config_from_state() -> Dict[str, Any]:
     max_tokens = st.session_state.get("system_max_tokens")
     modelo_path = st.session_state.get("system_modelo_path")
     prompt_perfil = st.session_state.get("system_prompt_perfil")
-    prompt_investigacion = st.session_state.get("system_prompt_investigacion")
+    prompt_sintesis = st.session_state.get("system_prompt_sintesis")
     prompt_ficha_producto = st.session_state.get("system_prompt_ficha_producto")
 
     cfg = dict(local or {})
@@ -213,8 +236,8 @@ def build_system_config_from_state() -> Dict[str, Any]:
         cfg["modelo_path"] = modelo_path
     if isinstance(prompt_perfil, str):
         cfg["prompt_perfil"] = prompt_perfil
-    if isinstance(prompt_investigacion, str):
-        cfg["prompt_investigacion"] = prompt_investigacion
+    if isinstance(prompt_sintesis, str):
+        cfg["prompt_sintesis"] = prompt_sintesis
     if isinstance(prompt_ficha_producto, str):
         cfg["prompt_ficha_producto"] = prompt_ficha_producto
 

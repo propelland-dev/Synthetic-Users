@@ -57,6 +57,8 @@ class SyntheticUser:
             # Campos legacy (por compatibilidad; si no existen, se verán como N/A)
             "edad": self.perfil_basico.get("edad", "N/A"),
             "genero": self.perfil_basico.get("genero", "N/A"),
+            "adopcion_tecnologica": self.perfil_basico.get("adopcion_tecnologica", "N/A"),
+            "profesion": self.perfil_basico.get("profesion", "N/A"),
             "ubicacion": self.perfil_basico.get("ubicacion", "N/A"),
             "experiencia_tecnologica": self.perfil_basico.get("experiencia_tecnologica", "N/A"),
             "intereses": ", ".join(self.perfil_basico.get("intereses", [])) if isinstance(self.perfil_basico.get("intereses"), list) else self.perfil_basico.get("intereses", "N/A"),

@@ -66,6 +66,10 @@ Este usuario se define por:
 - Comportamiento: {comportamiento}
 - Necesidades del asistente: {necesidades}
 - Barreras típicas de adopción: {barreras}
+- Edad: {edad}
+- Género: {genero}
+- Adopción tecnológica: {adopcion_tecnologica}
+- Profesión: {profesion}
 
 Genera un perfil detallado y realista de este usuario, incluyendo:
 - Nombre ficticio (uno)
@@ -75,7 +79,7 @@ Genera un perfil detallado y realista de este usuario, incluyendo:
 - Cómo toma decisiones y valida información
 - Qué le haría confiar o desconfiar del asistente
 
-Sé específico y realista. No inventes datos que contradigan las 3 dimensiones; si falta información, completa con supuestos razonables y explícitalos brevemente.""",
+Sé específico y realista. No inventes datos que contradigan las dimensiones proporcionadas; si falta información, completa con supuestos razonables y explícitalos brevemente.""",
 
     "cuestionario": """Eres {nombre_usuario}, con el siguiente perfil:
 {perfil_usuario}
@@ -143,8 +147,10 @@ CONTEXTO DE LA INVESTIGACIÓN:
 Producto: {nombre_producto}
 Descripción: {descripcion_producto}
 
-Objetivo de investigación:
-{investigacion_descripcion}
+DATOS DE INVESTIGACIÓN:
+- Descripción: {investigacion_descripcion}
+- Objetivo: {investigacion_objetivo}
+- Preguntas clave: {investigacion_preguntas}
 
 DATOS RECOPILADOS:
 Has recopilado respuestas de {nombre_usuario} sobre este producto. A continuación tienes los datos crudos de las respuestas por respondiente.

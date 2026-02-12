@@ -1,34 +1,22 @@
 {
   "mode": "population",
   "population": {
-    "n": 6,
+    "n": 2,
     "mix": [
       {
         "arquetipo": "Preocupado",
-        "count": 3,
+        "count": 2,
         "comportamiento": "- Cuestiona las respuestas\n- Contrasta con documentos\n- Desconfía de respuestas \"demasiado redondas\"\n- Usa la IA con cautela",
         "necesidades": "- Trazabilidad a fuente\n- Explicación del razonamiento\n- Mensajes claros de límites\n- Refuerzo del uso responsable",
         "barreras": "- Miedo a alucinaciones\n- Falta de transparencia\n- Respuestas sin fuente\n- Errores puntuales que rompen la confianza"
-      },
-      {
-        "arquetipo": "Explorador",
-        "count": 2,
-        "comportamiento": "- Prueba distintos enfoques\n- Hace preguntas abiertas\n- Juega con la herramienta\n- Aporta ideas y mejoras",
-        "necesidades": "- Conversación fluida\n- Libertad para experimentar\n- Capacidad de iterar\n- Feedback rápido",
-        "barreras": "- Respuestas rígidas\n- Demasiadas restricciones\n- Falta de evolución del producto"
-      },
-      {
-        "arquetipo": "Personalizado",
-        "count": 1,
-        "comportamiento": "- No usa activamente\n- Aprende viendo a otros\n- Espera madurez y estabilidad\n- Entra cuando ve seguridad",
-        "necesidades": "- Comunidad de uso\n- Historias reales\n- Ejemplos por rol o contexto\n- Seguridad percibida",
-        "barreras": "- Falta de referentes\n- Incertidumbre\n- Sensación de inmadurez del asistente"
       }
     ],
     "demografia": {
       "edad_min": 31,
       "edad_max": 50,
-      "ratio_hombres": 0.5
+      "ratio_hombres": 0.5,
+      "adopcion_tecnologica": "Early adopters – adoptan pronto cuando la tecnología ya es viable; suelen influir en otros.",
+      "profesion": "Ingeniero"
     }
   }
 }

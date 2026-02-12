@@ -42,40 +42,76 @@ def render_investigacion():
     )
     
     # Descripción de investigación (nuevo modelo)
-    st.markdown("### Descripción de la investigación")
+    st.markdown("### Contexto de la investigación")
 
     descripcion_default = ""
+    objetivo_default = ""
+    preguntas_default = ""
+
     if config_cargada:
-        # Migración visual desde config antigua (preguntas -> descripcion)
+        # Migración visual desde config antigua
         if isinstance(config_cargada.get("descripcion"), str):
             descripcion_default = config_cargada.get("descripcion", "")
+        
+        if isinstance(config_cargada.get("objetivo"), str):
+            objetivo_default = config_cargada.get("objetivo", "")
+        
+        if isinstance(config_cargada.get("preguntas"), str):
+            preguntas_default = config_cargada.get("preguntas", "")
         elif isinstance(config_cargada.get("preguntas"), list):
             preguntas = [str(p).strip() for p in config_cargada.get("preguntas", []) if str(p).strip()]
             if preguntas:
-                descripcion_default = "Investigación\n\nPreguntas:\n" + "\n".join(f"- {p}" for p in preguntas)
+                preguntas_default = "\n".join(f"- {p}" for p in preguntas)
 
     if "investigacion_descripcion" not in st.session_state:
         st.session_state["investigacion_descripcion"] = descripcion_default
+    if "investigacion_objetivo" not in st.session_state:
+        st.session_state["investigacion_objetivo"] = objetivo_default
+    if "investigacion_preguntas" not in st.session_state:
+        st.session_state["investigacion_preguntas"] = preguntas_default
 
     st.text_area(
-        "Describe el objetivo, contexto y (si aplica) preguntas",
+        "Descripción",
         key="investigacion_descripcion",
-        placeholder="Ejemplo:\nQueremos investigar la experiencia de uso del producto X.\n\nPreguntas:\n- ¿Qué te ha gustado?\n- ¿Qué cambiarías?\n- ¿A quién se lo recomendarías y por qué?",
-        height=260,
-        help="Este texto se guarda como investigación. Si incluyes preguntas (una por línea), se usarán para la entrevista."
+        placeholder="Ejemplo: Queremos investigar la experiencia de uso del producto X en un entorno de oficina.",
+        height=150,
+        help="Describe el contexto general de la investigación."
+    )
+
+    st.text_area(
+        "Objetivo",
+        key="investigacion_objetivo",
+        placeholder="Ejemplo: Entender qué funciones son más valoradas y cuáles generan frustración.",
+        height=100,
+        help="¿Qué quieres conseguir con esta investigación?"
+    )
+
+    st.text_area(
+        "Preguntas",
+        key="investigacion_preguntas",
+        placeholder="Ejemplo:\n- ¿Qué te ha gustado?\n- ¿Qué cambiarías?\n- ¿A quién se lo recomendarías?",
+        height=150,
+        help="Si incluyes preguntas (una por línea), se usarán para la entrevista o cuestionario."
     )
     
     # Mantener config en sesión siempre actualizada (se persistirá al cambiar de página)
     st.session_state["investigacion_config"] = {
         "estilo_investigacion": st.session_state.get("investigacion_estilo") or "Entrevista abierta",
         "descripcion": st.session_state.get("investigacion_descripcion", "") or "",
+        "objetivo": st.session_state.get("investigacion_objetivo", "") or "",
+        "preguntas": st.session_state.get("investigacion_preguntas", "") or "",
     }
 
     # Acciones
     st.markdown("---")
     if st.button("Resetear", key="investigacion_reset"):
         st.session_state.pop("investigacion_descripcion", None)
+        st.session_state.pop("investigacion_objetivo", None)
+        st.session_state.pop("investigacion_preguntas", None)
         st.session_state.pop("investigacion_estilo", None)
+        st.session_state.pop("investigacion_config", None)
+        st.session_state.pop("investigacion_config_synced_backend", None)
+        st.rerun()
         st.session_state.pop("investigacion_config", None)
         st.session_state.pop("investigacion_config_synced_backend", None)
         st.rerun()

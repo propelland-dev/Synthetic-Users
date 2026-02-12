@@ -26,6 +26,8 @@ class ResearchEngine:
         investigacion_descripcion: str,
         llm_client: LLMClient,
         prompt_template: Optional[str] = None,
+        investigacion_objetivo: Optional[str] = "",
+        investigacion_preguntas: Optional[str] = "",
     ):
         """
         Inicializa el motor de investigación
@@ -40,6 +42,8 @@ class ResearchEngine:
         self.usuario = usuario
         self.producto = producto
         self.investigacion_descripcion = investigacion_descripcion
+        self.investigacion_objetivo = investigacion_objetivo or ""
+        self.investigacion_preguntas = investigacion_preguntas or ""
         self.llm_client = llm_client
         self.prompt_template = prompt_template
         self.resultados: Optional[Dict[str, Any]] = None
@@ -68,6 +72,8 @@ class ResearchEngine:
             nombre_producto=self.producto.get("nombre_producto", "Producto"),
             descripcion_producto=self.producto.get("descripcion", ""),
             investigacion_descripcion=self.investigacion_descripcion,
+            investigacion_objetivo=self.investigacion_objetivo,
+            investigacion_preguntas=self.investigacion_preguntas,
         )
         resultado_texto = self.llm_client.generate(prompt)
 
@@ -83,6 +89,8 @@ class ResearchEngine:
             "producto": self.producto,
             "investigacion": {
                 "descripcion": self.investigacion_descripcion,
+                "objetivo": self.investigacion_objetivo,
+                "preguntas": self.investigacion_preguntas,
             },
             "resultado": resultado_texto,
         }

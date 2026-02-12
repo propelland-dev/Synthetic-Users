@@ -40,10 +40,14 @@ class MultiResearchEngine:
         prompt_cuestionario: Optional[str] = None,
         prompt_entrevista: Optional[str] = None,
         prompt_sintesis: Optional[str] = None,
+        investigacion_objetivo: Optional[str] = "",
+        investigacion_preguntas: Optional[str] = "",
     ):
         self.respondents = respondents
         self.producto = producto
         self.investigacion_descripcion = investigacion_descripcion
+        self.investigacion_objetivo = investigacion_objetivo or ""
+        self.investigacion_preguntas = investigacion_preguntas or ""
         # Usamos `llm_client` como "prototipo" de configuración.
         # Para evitar compartir estado entre respondientes (p.ej. throttling/estado interno),
         # creamos instancias nuevas para cada respondiente y otra para la síntesis final.
@@ -94,6 +98,8 @@ class MultiResearchEngine:
             nombre_producto=self.producto.get("nombre_producto", "Producto"),
             descripcion_producto=self.producto.get("descripcion", ""),
             investigacion_descripcion=self.investigacion_descripcion,
+            investigacion_objetivo=self.investigacion_objetivo,
+            investigacion_preguntas=self.investigacion_preguntas,
             preguntas=preguntas_texto,
         )
 
@@ -114,6 +120,8 @@ class MultiResearchEngine:
             nombre_producto=self.producto.get("nombre_producto", "Producto"),
             descripcion_producto=self.producto.get("descripcion", ""),
             investigacion_descripcion=self.investigacion_descripcion,
+            investigacion_objetivo=self.investigacion_objetivo,
+            investigacion_preguntas=self.investigacion_preguntas,
             n_questions=n,
             seed=seed_txt,
         )
@@ -122,7 +130,11 @@ class MultiResearchEngine:
     def execute(self) -> Dict[str, Any]:
         # Guardar configuraciones utilizadas
         self._save_json("producto.json", self.producto, subdir="configs")
-        self._save_json("investigacion.json", {"descripcion": self.investigacion_descripcion}, subdir="configs")
+        self._save_json("investigacion.json", {
+            "descripcion": self.investigacion_descripcion,
+            "objetivo": self.investigacion_objetivo,
+            "preguntas": self.investigacion_preguntas,
+        }, subdir="configs")
         self._save_json("respondientes_config.json", {"respondents": self.respondents}, subdir="configs")
 
         # Guardar plan
@@ -203,6 +215,8 @@ class MultiResearchEngine:
             nombre_producto=self.producto.get("nombre_producto", "Producto"),
             descripcion_producto=self.producto.get("descripcion", ""),
             investigacion_descripcion=self.investigacion_descripcion,
+            investigacion_objetivo=self.investigacion_objetivo,
+            investigacion_preguntas=self.investigacion_preguntas,
         )
 
         # Crear un resumen de datos más legible (texto plano en lugar de JSON)
@@ -244,7 +258,11 @@ class MultiResearchEngine:
             "usuario": usuario_basico,
             "usuario_nombre": nombre_usuario,
             "producto": self.producto,
-            "investigacion": {"descripcion": self.investigacion_descripcion},
+            "investigacion": {
+                "descripcion": self.investigacion_descripcion,
+                "objetivo": self.investigacion_objetivo,
+                "preguntas": self.investigacion_preguntas,
+            },
             "resultado": resultado_texto,
             "plan": self.plan,
             "respondents": respondents_meta,
@@ -264,7 +282,11 @@ class MultiResearchEngine:
 
         # Guardar configuraciones utilizadas
         self._save_json("producto.json", self.producto, subdir="configs")
-        self._save_json("investigacion.json", {"descripcion": self.investigacion_descripcion}, subdir="configs")
+        self._save_json("investigacion.json", {
+            "descripcion": self.investigacion_descripcion,
+            "objetivo": self.investigacion_objetivo,
+            "preguntas": self.investigacion_preguntas,
+        }, subdir="configs")
         self._save_json("respondientes_config.json", {"respondents": self.respondents}, subdir="configs")
 
         # Guardar plan
@@ -395,6 +417,8 @@ class MultiResearchEngine:
             nombre_producto=self.producto.get("nombre_producto", "Producto"),
             descripcion_producto=self.producto.get("descripcion", ""),
             investigacion_descripcion=self.investigacion_descripcion,
+            investigacion_objetivo=self.investigacion_objetivo,
+            investigacion_preguntas=self.investigacion_preguntas,
         )
 
         # Crear un resumen de datos más legible (texto plano en lugar de JSON)
@@ -436,7 +460,11 @@ class MultiResearchEngine:
             "usuario": usuario_basico,
             "usuario_nombre": nombre_usuario,
             "producto": self.producto,
-            "investigacion": {"descripcion": self.investigacion_descripcion},
+            "investigacion": {
+                "descripcion": self.investigacion_descripcion,
+                "objetivo": self.investigacion_objetivo,
+                "preguntas": self.investigacion_preguntas,
+            },
             "resultado": resultado_texto,
             "plan": self.plan,
             "respondents": respondents_meta,
