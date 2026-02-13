@@ -20,3 +20,4 @@ backend/storage/productos/*
 !backend/storage/**/config.json
 frontend/configs/*.json
 !frontend/configs/config_system.json
+!frontend/configs/arquetipos.json
