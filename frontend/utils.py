@@ -82,3 +82,30 @@ def existe_config(tipo: str) -> bool:
     if tipo not in CONFIG_FILES:
         return False
     return CONFIG_FILES[tipo].exists()
+
+
+def limpiar_respuesta_llm(text: str) -> str:
+    """
+    Limpia la respuesta de la IA eliminando ÚNICAMENTE etiquetas técnicas 
+    como <think> y bloques de código redundantes.
+    NO realiza recortes de contenido por anclajes ni filtrado inteligente.
+    """
+    if not text:
+        return ""
+    
+    import re
+    
+    # 1. Eliminar bloques completos <think>...</think>
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # 2. Manejar tags huérfanos
+    text = re.sub(r'</?think>', '', text, flags=re.IGNORECASE)
+            
+    # 3. Eliminar envoltorios de bloques de código Markdown globales
+    text = text.strip()
+    if text.startswith('```'):
+        lines = text.splitlines()
+        if len(lines) >= 2 and lines[0].startswith('```') and lines[-1].strip() == '```':
+            text = "\n".join(lines[1:-1])
+
+    return text.strip()

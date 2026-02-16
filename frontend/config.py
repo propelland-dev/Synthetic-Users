@@ -10,11 +10,7 @@ from typing import Dict, Any, Optional
 HUGGINGFACE_UI_CONFIG = {
     "models_list": [
         "ServiceNow-AI/Apriel-1.6-15b-Thinker:together",
-        "Qwen/Qwen3-4B-Thinking-2507:nscale",
-        "meta-llama/Llama-3.1-8B-Instruct:novita",
-        "microsoft/Phi-3.5-mini-instruct",
-        "Qwen/Qwen2.5-7B-Instruct",
-        "HuggingFaceH4/zephyr-7b-beta"
+        "Qwen/Qwen3-4B-Thinking-2507:nscale"
     ]
 }
 
@@ -32,6 +28,7 @@ API_ENDPOINTS = {
     "iniciar_stream": f"{API_BASE_URL}/api/investigacion/iniciar_stream",
     "job_start": f"{API_BASE_URL}/api/investigacion/job/start",
     "job_events": f"{API_BASE_URL}/api/investigacion/job",
+    "refinar": f"{API_BASE_URL}/api/resultados/refinar",
     "health": f"{API_BASE_URL}/health",
 }
 
@@ -210,6 +207,31 @@ def cancelar_investigacion_job(run_id: str) -> bool:
         return False
 
 
+def refinar_texto(text: str, system_config: Dict[str, Any]) -> Optional[str]:
+    """
+    Solicita al backend refinar un texto sucio de IA.
+    """
+    try:
+        payload = {
+            "text": text,
+            "llm_provider": system_config.get("llm_provider", "ollama"),
+            "huggingface_api_key": system_config.get("huggingface_api_key"),
+            "huggingface_model": system_config.get("huggingface_model"),
+            "anythingllm_base_url": system_config.get("anythingllm_base_url"),
+            "anythingllm_api_key": system_config.get("anythingllm_api_key"),
+            "anythingllm_workspace_slug": system_config.get("anythingllm_workspace_slug"),
+        }
+        response = requests.post(API_ENDPOINTS["refinar"], json=payload, timeout=300)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("status") == "success":
+            return data.get("refined_text")
+        return None
+    except Exception as e:
+        print(f"Error al refinar texto: {e}")
+        return None
+
+
 # Compatibilidad con versiones anteriores del frontend
 def iniciar_entrevista(system_config: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     """Alias legacy: iniciar investigación."""
@@ -224,6 +246,18 @@ def obtener_resultados_latest() -> Optional[Dict[str, Any]]:
         return response.json()
     except Exception as e:
         print(f"Error al obtener resultados: {e}")
+        return None
+
+
+def obtener_respondiente_details(resultado_id: str, respondent_id: str) -> Optional[Dict[str, Any]]:
+    """Obtiene los detalles de un respondiente específico"""
+    try:
+        url = f"{API_ENDPOINTS['resultados']}/{resultado_id}/respondent/{respondent_id}"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        print(f"Error al obtener detalles del respondiente: {e}")
         return None
 
 

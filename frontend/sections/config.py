@@ -100,10 +100,10 @@ def render_config():
         max_tokens = st.number_input(
             "Max Tokens",
             min_value=50,
-            max_value=4000,
+            max_value=8000,
             value=(config_cargada.get("max_tokens", 1000) if config_cargada else 1000),
             step=50,
-            help="Número máximo de tokens en la respuesta.",
+            help="Número máximo de tokens en la respuesta. Si usas modelos que 'piensan' (DeepSeek, Apriel), se recomienda subir este valor a 4000 o más.",
             key="system_max_tokens",
         )
 
@@ -310,19 +310,24 @@ Recuerda: estás HABLANDO en una entrevista, no escribiendo. Sé natural y conve
 
     # Prompt para síntesis final
     st.markdown("#### Prompt: Síntesis de Investigación")
-    prompt_sintesis_default = """Eres un investigador UX experto analizando respuestas de usuarios sintéticos.
+    prompt_sintesis_default = """Eres un investigador UX experto. Tu tarea es analizar las respuestas de los usuarios y generar un informe de síntesis profesional.
 
-CONTEXTO DE LA INVESTIGACIÓN:
-Producto: {nombre_producto}
-Descripción: {descripcion_producto}
+REGLAS CRÍTICAS:
+1. Comienza DIRECTAMENTE con el encabezado "## Resumen ejecutivo".
+2. No incluyas introducciones, preámbulos ni comentarios sobre la tarea.
+3. No uses etiquetas <think> ni muestres tu razonamiento.
+4. Genera el informe exclusivamente en español y formato Markdown.
 
-DATOS DE INVESTIGACIÓN:
-- Descripción: {investigacion_descripcion}
+DATOS DEL PRODUCTO:
+- Producto: {nombre_producto}
+- Contexto: {descripcion_producto}
+
+DATOS DE LA INVESTIGACIÓN:
 - Objetivo: {investigacion_objetivo}
 - Preguntas clave: {investigacion_preguntas}
 
-DATOS RECOPILADOS:
-Has recopilado respuestas de {nombre_usuario} sobre este producto. A continuación tienes los datos crudos de las respuestas por respondiente.
+DATOS RECOPILADOS (Analiza lo siguiente):
+{nombre_usuario} han respondido. A continuación sus aportaciones:
 
 Analiza estos datos y genera un informe de investigación profesional que incluya:
 - Resumen ejecutivo
@@ -344,31 +349,30 @@ Cita evidencias específicas de las respuestas cuando sea útil. Mantén un tono
 
     # Prompt para generar ficha de producto
     st.markdown("#### Prompt: Generación de Ficha de Producto")
-    prompt_ficha_producto_default = """Eres un asistente de research. Con los datos estructurados de un producto, genera una “Ficha de producto” en español (Markdown), clara y accionable.
+    prompt_ficha_producto_default = """Eres un asistente de research experto. Tu tarea es generar una "Ficha de producto" técnica y clara en español (Markdown).
 
-DATOS
+REGLAS CRÍTICAS:
+1. Comienza DIRECTAMENTE con el encabezado "# Ficha de Producto".
+2. No incluyas introducciones ni comentarios.
+3. No uses etiquetas <think> ni muestres razonamiento.
+4. Si falta información, marca como "(pendiente)" y añade preguntas en "Preguntas abiertas".
+
+DATOS DEL PRODUCTO:
 - Tipo: {producto_tipo}  (nuevo/existente)
 - Nombre: {nombre_producto}
-- Descripción (input libre): {descripcion_input}
-- Problema a resolver: {problema_a_resolver}
-- Propuesta de valor: {propuesta_valor}
-- Funcionalidades clave: {funcionalidades_clave}
-- Canal de soporte: {canal_soporte}
-- Productos sustitutivos: {productos_sustitutivos}
-- Fuentes a ingestar: {fuentes_a_ingestar}
+- Descripción: {descripcion_input}
+- Problema: {problema_a_resolver}
+- Valor: {propuesta_valor}
+- Funcionalidades: {funcionalidades_clave}
+- Soporte: {canal_soporte}
+- Sustitutivos: {productos_sustitutivos}
+- Fuentes: {fuentes_a_ingestar}
 - Observaciones: {observaciones}
 - Riesgos: {riesgos}
 - Dependencias: {dependencias}
 
-SI ES EXISTENTE (opcional)
-- URL: {url}
-- Documentos: {documentos}
-- Fotos: {fotos}
-
-REQUISITOS DE SALIDA
-- Devuelve SOLO Markdown.
+REQUISITOS DE SALIDA:
 - Incluye secciones: Resumen, Problema, Propuesta de valor, Alcance/No alcance, Funcionalidades clave, Soporte/Operación, Sustitutivos/Alternativas, Riesgos, Dependencias, Fuentes a ingestar, Observaciones, Preguntas abiertas.
-- Si falta información, no inventes: marca “(pendiente)” y añade preguntas concretas a “Preguntas abiertas”.
 """
 
     prompt_ficha_producto = st.text_area(

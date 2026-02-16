@@ -28,7 +28,7 @@ LLAMA_CONFIG = {
     "model": os.getenv("LLAMA_MODEL", "llama3.2:latest"),  # Nombre del modelo en Ollama
     "base_url": os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
     "temperature": float(os.getenv("LLAMA_TEMPERATURE", "0.7")),
-    "max_tokens": int(os.getenv("LLAMA_MAX_TOKENS", "1000")),
+    "max_tokens": int(os.getenv("LLAMA_MAX_TOKENS", "8000")),
 }
 
 # Configuración AnythingLLM (para usar OpenAI vía AnythingLLM)
@@ -54,8 +54,24 @@ HUGGINGFACE_CONFIG = {
     "model": os.getenv("HUGGINGFACE_MODEL", "microsoft/Phi-3.5-mini-instruct"),
     "base_url": os.getenv("HUGGINGFACE_BASE_URL", "https://router.huggingface.co/models/"),
     "temperature": float(os.getenv("HUGGINGFACE_TEMPERATURE", "0.7")),
-    "max_tokens": int(os.getenv("HUGGINGFACE_MAX_TOKENS", "1000")),
+    "max_tokens": int(os.getenv("HUGGINGFACE_MAX_TOKENS", "8000")),
 }
+
+# Opciones para usuarios sintéticos
+OPCIONES_ADOPCION = [
+    "Innovadores – prueban tecnologías muy nuevas, incluso experimentales.",
+    "Early adopters – adoptan pronto cuando la tecnología ya es viable; suelen influir en otros.",
+    "Mayoría temprana – adoptan cuando la tecnología está más probada.",
+    "Mayoría tardía – adoptan por necesidad o cuando ya es estándar.",
+    "Rezagados / baja adopción – evitan el cambio tecnológico o lo adoptan muy tarde."
+]
+
+OPCIONES_PROFESION = [
+    "Operario",
+    "Ingeniero",
+    "Administrativo",
+    "Dirección"
+]
 
 # Prompts por defecto
 DEFAULT_PROMPTS = {
@@ -79,7 +95,13 @@ Genera un perfil detallado y realista de este usuario, incluyendo:
 - Cómo toma decisiones y valida información
 - Qué le haría confiar o desconfiar del asistente
 
-Sé específico y realista. No inventes datos que contradigan las dimensiones proporcionadas; si falta información, completa con supuestos razonables y explícitalos brevemente.""",
+REGLAS CRÍTICAS DE FORMATO:
+1. Responde EXCLUSIVAMENTE en español.
+2. NO incluyas preámbulos, introducciones ni comentarios sobre la tarea.
+3. NO uses etiquetas <think> ni muestres tu razonamiento interno.
+4. La respuesta DEBE empezar directamente con "1. Identidad".
+
+Sé específico y realista. No inventes datos que contradigan las dimensiones proporcionadas; si falta información, completa con supuestos razonables y explícitales brevemente.""",
 
     "cuestionario": """Eres {nombre_usuario}, con el siguiente perfil:
 {perfil_usuario}
@@ -98,10 +120,12 @@ Como es un formulario escrito, tus respuestas deben ser:
 - Sin muletillas ni divagaciones
 - Enfocadas en responder exactamente lo que se pregunta
 
-PREGUNTAS:
-{preguntas}
-
-FORMATO DE RESPUESTA (responde solo con las respuestas, una por línea):
+REGLAS CRÍTICAS DE FORMATO:
+1. Responde EXCLUSIVAMENTE en español.
+2. NO incluyas preámbulos ni explicaciones. Solo las respuestas.
+3. NO uses etiquetas <think>.
+4. La respuesta DEBE empezar directamente con "A1:".
+5. FORMATO DE RESPUESTA (responde solo con las respuestas, una por línea):
 A1: [tu respuesta directa y específica]
 A2: [tu respuesta directa y específica]
 A3: [tu respuesta directa y específica]
@@ -126,9 +150,12 @@ Como es una conversación oral, tus respuestas deben ser:
 - Pueden incluir ejemplos, anécdotas o contexto adicional
 - Reflejan tu forma de hablar y expresarte
 
-Genera tanto las preguntas del entrevistador como tus respuestas conversacionales.
-
-FORMATO DE RESPUESTA:
+REGLAS CRÍTICAS DE FORMATO:
+1. Responde EXCLUSIVAMENTE en español.
+2. NO incluyas introducciones, preámbulos ni comentarios sobre el proceso.
+3. NO uses etiquetas <think> ni muestres tu razonamiento interno.
+4. La respuesta DEBE empezar directamente con "P1:".
+5. FORMATO DE RESPUESTA:
 P1: [pregunta del entrevistador]
 R1: [tu respuesta conversacional como este usuario]
 
@@ -141,19 +168,25 @@ Seed para variabilidad: {seed}
 
 Recuerda: estás HABLANDO en una entrevista, no escribiendo. Sé natural y conversacional.""",
 
-    "sintesis": """Eres un investigador UX experto analizando respuestas de usuarios sintéticos.
+    "sintesis": """Eres un investigador UX experto. Tu tarea es analizar las respuestas de los usuarios y generar un informe de síntesis profesional.
 
-CONTEXTO DE LA INVESTIGACIÓN:
-Producto: {nombre_producto}
-Descripción: {descripcion_producto}
+REGLAS CRÍTICAS:
+1. Responde EXCLUSIVAMENTE en español.
+2. La respuesta DEBE empezar directamente con el encabezado "## Resumen ejecutivo".
+3. No incluyas introducciones, preámbulos ni comentarios sobre la tarea.
+4. No uses etiquetas <think> ni muestres tu razonamiento.
+5. Genera el informe exclusivamente en formato Markdown.
 
-DATOS DE INVESTIGACIÓN:
-- Descripción: {investigacion_descripcion}
+DATOS DEL PRODUCTO:
+- Producto: {nombre_producto}
+- Contexto: {descripcion_producto}
+
+DATOS DE LA INVESTIGACIÓN:
 - Objetivo: {investigacion_objetivo}
 - Preguntas clave: {investigacion_preguntas}
 
-DATOS RECOPILADOS:
-Has recopilado respuestas de {nombre_usuario} sobre este producto. A continuación tienes los datos crudos de las respuestas por respondiente.
+DATOS RECOPILADOS (Analiza lo siguiente):
+{nombre_usuario} han respondido. A continuación sus aportaciones:
 
 Analiza estos datos y genera un informe de investigación profesional que incluya:
 - Resumen ejecutivo
@@ -163,5 +196,20 @@ Analiza estos datos y genera un informe de investigación profesional que incluy
 - Necesidades y expectativas clave
 - Recomendaciones accionables y priorizadas
 
-Cita evidencias específicas de las respuestas cuando sea útil. Mantén un tono profesional y objetivo."""
+Cita evidencias específicas de las respuestas cuando sea útil. Mantén un tono profesional y objetivo.""",
+
+    "refinado": """Tu tarea es LIMPIAR y EXTRAER el contenido útil de una respuesta de IA, eliminando borradores, pensamientos internos y preámbulos innecesarios.
+
+REGLAS ABSOLUTAS:
+1. Mantén el texto original PALABRA POR PALABRA en las partes útiles. No resumas. No parafrasees.
+2. Elimina cualquier texto en inglés si el contenido principal es en español.
+3. Elimina borradores incompletos si detectas que el modelo volvió a empezar.
+4. Elimina preámbulos como "Aquí tienes la entrevista", "Entendido", etc.
+5. Si el contenido contiene "P1:", la salida debe empezar exactamente en "P1:".
+6. Si el contenido contiene "## Resumen ejecutivo", la salida debe empezar exactamente en "## Resumen ejecutivo".
+7. Si el contenido contiene "1. Identidad", la salida debe empezar exactamente en "1. Identidad".
+8. Devuelve ÚNICAMENTE el contenido limpio. Sin introducciones tuyas ni etiquetas <think>.
+
+TEXTO A LIMPIAR:
+{texto}"""
 }

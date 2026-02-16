@@ -3,10 +3,12 @@ import sys
 import re
 from pathlib import Path
 from datetime import datetime
+from typing import Optional, Dict, Any
 
 # Agregar el directorio padre al path para importar config
 sys.path.append(str(Path(__file__).parent.parent))
-from config import obtener_resultados_latest
+from config import obtener_resultados_latest, obtener_respondiente_details, refinar_texto
+from utils import cargar_config, existe_config, limpiar_respuesta_llm
 
 
 def _to_latin1_safe(text: str) -> str:
@@ -43,8 +45,12 @@ def _clean_html_for_fpdf(html: str) -> str:
     if not html:
         return ""
     
-    # 1. Eliminar bloques <think>...</think> completamente
+    # 1. Eliminar bloques <think>...</think> completamente y manejar tags huérfanos
     html = re.sub(r'<think>.*?</think>', '', html, flags=re.DOTALL | re.IGNORECASE)
+    if '</think>' in html:
+        html = html.split('</think>')[-1]
+    if '<think>' in html.lower():
+        html = html.split('<think>')[0]
     
     # 2. Reemplazos básicos de tags que fpdf2 sí soporta pero markdown genera como strong/em
     html = re.sub(r'<(strong|b)>', '<b>', html, flags=re.IGNORECASE)
@@ -71,7 +77,7 @@ def _clean_html_for_fpdf(html: str) -> str:
     return html
 
 
-def _build_result_pdf_bytes(resultados: dict) -> bytes:
+def _build_result_pdf_bytes(resultados: dict, refined_main: Optional[str] = None, refined_steps: Optional[Dict[str, str]] = None) -> bytes:
     # Import local para que el módulo solo sea necesario cuando se usa.
     from fpdf import FPDF, HTMLMixin
     import markdown as md
@@ -80,77 +86,151 @@ def _build_result_pdf_bytes(resultados: dict) -> bytes:
     usuario = resultados.get("usuario") or {}
     producto = resultados.get("producto") or {}
     investigacion = resultados.get("investigacion") or {}
-    resultado_texto = resultados.get("resultado") or ""
+    # Usar versión refinada si existe, si no la original (limpia de tags)
+    resultado_texto = refined_main if refined_main else resultados.get("resultado") or ""
+    resultado_id = resultados.get("resultado_id") or ""
+    respondents_meta = resultados.get("respondents") or []
 
     class PDF(FPDF, HTMLMixin):
-        pass
+        def header(self):
+            self.set_font("Helvetica", "B", 10)
+            self.set_text_color(100, 100, 100)
+            self.cell(0, 10, "Informe de Investigación de Usuarios Sintéticos", 0, 0, "L")
+            self.cell(0, 10, ts[:10], 0, 1, "R")
+            self.line(10, 18, 200, 18)
+            self.ln(5)
+
+        def footer(self):
+            self.set_y(-15)
+            self.set_font("Helvetica", "I", 8)
+            self.set_text_color(150, 150, 150)
+            self.cell(0, 10, f"Página {self.page_no()}/{{nb}}", 0, 0, "C")
 
     pdf = PDF()
+    pdf.alias_nb_pages()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    def mc(txt: str, h: float, size: int):
-        # Asegura que el cursor vuelve al margen izquierdo antes de escribir
+    def mc(txt: str, h: float, size: int, style: str = "", align: str = "L", color=(0, 0, 0)):
         pdf.set_x(pdf.l_margin)
-        pdf.set_font("Helvetica", size=size)
+        pdf.set_font("Helvetica", style, size=size)
+        pdf.set_text_color(*color)
         safe = _to_latin1_safe(_break_long_tokens(txt))
-        pdf.multi_cell(0, h, safe)
+        pdf.multi_cell(0, h, safe, align=align)
 
-    mc("Resultados de la investigación", h=10, size=16)
-    pdf.ln(2)
+    # Título Principal
+    mc("Informe de Hallazgos", h=12, size=20, style="B", align="C", color=(31, 73, 125))
+    pdf.ln(5)
 
-    # Resumen consolidado para el PDF
-    pdf.set_font("Helvetica", "B", size=11)
+    # Datos Generales
+    pdf.set_fill_color(240, 240, 240)
+    pdf.rect(pdf.l_margin, pdf.get_y(), 190, 25, "F")
     
     # Calcular Mix para el PDF
     if usuario.get("mode") == "population":
-        respondents = resultados.get("respondents") or []
         counts = {}
-        for r in respondents:
+        for r in respondents_meta:
             if isinstance(r, dict):
                 a = r.get("arquetipo") or "Personalizado"
                 counts[a] = counts.get(a, 0) + 1
         mix_details = ", ".join(f"{v} {k}" for k, v in counts.items())
-        mix_text = f"{len(respondents)} ({mix_details})"
+        mix_text = f"{len(respondents_meta)} ({mix_details})"
     else:
         mix_text = "1 (Usuario único)"
 
-    mc(f"Producto: {producto.get('nombre_producto', 'N/A')}", h=6, size=11)
-    mc(f"Estilo de investigación: {investigacion.get('estilo_investigacion', 'N/A')}", h=6, size=11)
-    mc(f"Población: {mix_text}", h=6, size=11)
+    pdf.set_y(pdf.get_y() + 2)
+    mc(f"Producto: {producto.get('nombre_producto', 'N/A')}", h=6, size=11, style="B")
+    mc(f"Población de estudio: {mix_text}", h=6, size=10)
+    mc(f"Tipo de investigación: {investigacion.get('estilo_investigacion', 'N/A')}", h=6, size=10)
     
-    pdf.ln(2)
-    mc(f"Timestamp: {ts}", h=5, size=9)
-    pdf.ln(3)
+    pdf.ln(10)
 
-    if producto.get("descripcion"):
-        pdf.ln(1)
-        mc("Descripción del producto:", h=6, size=11)
-        mc(producto.get("descripcion", ""), h=5, size=10)
+    # --- SECCIÓN: SÍNTESIS GLOBAL ---
+    mc("1. Síntesis y Resumen de Hallazgos", h=8, size=14, style="B", color=(31, 73, 125))
+    pdf.line(pdf.l_margin, pdf.get_y(), 60, pdf.get_y())
+    pdf.ln(4)
 
-    if investigacion.get("descripcion"):
-        pdf.ln(2)
-        mc("Descripción de la investigación:", h=6, size=11)
-        mc(investigacion.get("descripcion", ""), h=5, size=10)
-
-    pdf.ln(3)
-    mc("Resultado:", h=6, size=11)
     # Renderizar Markdown -> HTML (fpdf2 HTMLMixin)
-    pdf.set_x(pdf.l_margin)
     pdf.set_font("Helvetica", size=10)
-    # Asegurar que resultado_texto no sea None
-    texto_final = resultado_texto if resultado_texto is not None else ""
-    md_input = _break_long_tokens(texto_final)
+    pdf.set_text_color(0, 0, 0)
+    
+    texto_final = limpiar_respuesta_llm(str(resultado_texto or ""))
+    md_input = _break_long_tokens(texto_final.strip())
     html = md.markdown(md_input, extensions=["extra"])
     html = _clean_html_for_fpdf(html)
     html = _to_latin1_safe(html)
-    pdf.write_html(html)
+    
+    try:
+        pdf.write_html(html)
+    except Exception:
+        pdf.ln(5)
+        pdf.multi_cell(0, 5, _to_latin1_safe(texto_final))
 
-    # fpdf2: output(dest="S") puede devolver str, bytes o bytearray según versión/config
+    # --- SECCIÓN: DETALLE POR RESPONDIENTE ---
+    if respondents_meta:
+        pdf.add_page()
+        mc("2. Detalle por Respondiente", h=8, size=14, style="B", color=(31, 73, 125))
+        pdf.line(pdf.l_margin, pdf.get_y(), 60, pdf.get_y())
+        pdf.ln(5)
+
+        for i, resp_meta in enumerate(respondents_meta):
+            resp_id = resp_meta.get("respondent_id")
+            if not resp_id or not resultado_id:
+                continue
+            
+            # Obtener detalles del respondiente
+            detalles = obtener_respondiente_details(resultado_id, resp_id)
+            if not detalles:
+                continue
+
+            # Subtítulo de respondiente
+            mc(f"Respondiente {i+1}: {detalles.get('usuario_nombre', 'N/A')} ({resp_meta.get('arquetipo', 'N/A')})", 
+               h=8, size=12, style="B", color=(50, 50, 50))
+            pdf.ln(2)
+
+            # Perfil demográfico
+            pb = detalles.get("perfil_basico", {})
+            demo_text = f"Edad: {pb.get('edad', 'N/A')} | Género: {pb.get('genero', 'N/A')} | Profesión: {pb.get('profesion', 'N/A')} | Adopción: {pb.get('adopcion_tecnologica', 'N/A')}"
+            mc(demo_text, h=5, size=9, style="I")
+            pdf.ln(2)
+
+            # Perfil psicológico
+            mc("Perfil Psicológico:", h=6, size=10, style="B")
+            perfil_limpio = limpiar_respuesta_llm(detalles.get("perfil_generado", ""))
+            mc(perfil_limpio, h=5, size=9)
+            pdf.ln(4)
+
+            # Participación
+            for idx_step, step in enumerate(detalles.get("steps", [])):
+                stype = step.get("type", "Paso").capitalize()
+                mc(f"Resultado de {stype}:", h=6, size=10, style="B")
+                
+                # Buscar si hay versión refinada para este paso
+                step_refine_key = f"refinado_{resultado_id}_{resp_id}_{idx_step}"
+                if refined_steps and step_refine_key in refined_steps:
+                    part_limpia = refined_steps[step_refine_key]
+                else:
+                    participacion_texto = step.get("respuestas") or step.get("transcripcion") or ""
+                    part_limpia = limpiar_respuesta_llm(participacion_texto)
+                
+                # Para evitar PDFs demasiado largos si hay mucha basura, limitamos o limpiamos
+                mc(part_limpia, h=5, size=9)
+                pdf.ln(3)
+
+            pdf.ln(5)
+            # Línea divisoria entre respondientes
+            if i < len(respondents_meta) - 1:
+                pdf.set_draw_color(200, 200, 200)
+                pdf.line(pdf.l_margin, pdf.get_y(), 200 - pdf.l_margin, pdf.get_y())
+                pdf.ln(5)
+                pdf.set_draw_color(0, 0, 0)
+
+    # Salida final
     out = pdf.output(dest="S")
     if isinstance(out, (bytes, bytearray)):
         return bytes(out)
     return str(out).encode("latin-1")
+
 
 def render_resultados():
     st.markdown('<div class="section-title"><span class="material-symbols-outlined">analytics</span>Resultados de la Investigación</div>', unsafe_allow_html=True)
@@ -202,18 +282,120 @@ def render_resultados():
             
         # Resultado único
         st.markdown("### Resultado de la investigación")
+        
+        # Sistema de refinado manual para el resultado principal
         resultado_texto = resultados.get("resultado", "")
         
-        # Limpiar etiquetas <think> para la visualización en Streamlit
-        resultado_limpio = re.sub(r'<think>.*?</think>', '', resultado_texto, flags=re.DOTALL | re.IGNORECASE)
-        st.markdown(resultado_limpio or "_(Sin resultado)_")
+        # Recuperar estado de refinado si existe
+        refinado_key = f"refinado_main_{resultados.get('resultado_id', 'none')}"
+        if refinado_key not in st.session_state:
+            st.session_state[refinado_key] = limpiar_respuesta_llm(resultado_texto)
+            
+        col_res1, col_res2 = st.columns([4, 1])
+        with col_res2:
+            if st.button("✨ Refinar con IA", key="refine_main_btn"):
+                system_config = cargar_config("system")
+                with st.spinner("Refinando análisis..."):
+                    refined = refinar_texto(resultado_texto, system_config)
+                    if refined:
+                        st.session_state[refinado_key] = refined
+                        st.success("Refinado!")
+                        st.rerun()
+                    else:
+                        st.error("Error al refinar")
+        
+        with col_res1:
+            st.markdown(st.session_state[refinado_key] or "_(Sin resultado)_")
 
-        # Artefactos por respondiente (si existen)
-        respondents = resultados.get("respondents")
-        if isinstance(respondents, list) and respondents:
-            with st.expander("Ver respondientes (IDs)", expanded=False):
-                st.write("Cada respondiente genera un artefacto JSON guardado en el backend.")
-                st.json(respondents)
+        # Artefactos por respondiente (Navegador de perfiles)
+        respondents_meta = resultados.get("respondents")
+        if isinstance(respondents_meta, list) and respondents_meta:
+            st.markdown("---")
+            with st.expander("### Navegador de Respondientes", expanded=False):
+                st.caption("Selecciona un usuario para ver su perfil detallado y su participación individual.")
+                
+                # Crear etiquetas amigables para el selectbox
+                # Ejemplo: "Respondiente 1 (Preocupado)"
+                resp_options = []
+                for i, r in enumerate(respondents_meta):
+                    label = f"Usuario {i+1} ({r.get('arquetipo', 'Personalizado')})"
+                    resp_options.append(label)
+                
+                selected_label = st.selectbox("Seleccionar usuario", options=resp_options, key="select_respondent")
+                selected_idx = resp_options.index(selected_label)
+                selected_meta = respondents_meta[selected_idx]
+                
+                # Botón para cargar detalles
+                resultado_id = resultados.get("resultado_id")
+                respondent_id = selected_meta.get("respondent_id")
+                
+                if resultado_id and respondent_id:
+                    # Cachear en session_state para evitar llamadas repetidas
+                    cache_key = f"details_{resultado_id}_{respondent_id}"
+                    if cache_key not in st.session_state:
+                        with st.spinner(f"Cargando detalles de {selected_label}..."):
+                            details = obtener_respondiente_details(resultado_id, respondent_id)
+                            st.session_state[cache_key] = details
+                    
+                    detalles = st.session_state.get(cache_key)
+                    
+                    if detalles:
+                        col_p1, col_p2 = st.columns([1, 2])
+                        
+                        with col_p1:
+                            st.markdown("#### Datos Demográficos")
+                            pb = detalles.get("perfil_basico", {})
+                            st.write(f"**Edad:** {pb.get('edad', 'N/A')}")
+                            st.write(f"**Género:** {pb.get('genero', 'N/A')}")
+                            st.write(f"**Profesión:** {pb.get('profesion', 'N/A')}")
+                            st.write(f"**Adopción:** {pb.get('adopcion_tecnologica', 'N/A')}")
+                            
+                            with st.expander("Ver dimensiones base", expanded=False):
+                                st.markdown("**Comportamiento**")
+                                st.caption(pb.get("comportamiento", ""))
+                                st.markdown("**Necesidades**")
+                                st.caption(pb.get("necesidades", ""))
+                                st.markdown("**Barreras**")
+                                st.caption(pb.get("barreras", ""))
+                        
+                        with col_p2:
+                            st.markdown("#### Perfil Psicológico")
+                            perfil_texto = detalles.get("perfil_generado", "_(Sin perfil generado)_")
+                            perfil_limpio = limpiar_respuesta_llm(perfil_texto)
+                            st.markdown(perfil_limpio)
+                        
+                        st.markdown("#### Participación (Entrevista/Cuestionario)")
+                        steps = detalles.get("steps", [])
+                        if not steps:
+                            st.info("Este usuario no tiene pasos de investigación registrados.")
+                        else:
+                            for idx_step, step in enumerate(steps):
+                                stype = step.get("type", "Paso")
+                                with st.expander(f"Ver {stype.capitalize()}", expanded=True):
+                                    participacion_texto = step.get("respuestas") or step.get("transcripcion") or ""
+                                    
+                                    # Estado de refinado para este paso
+                                    step_refine_key = f"refinado_{resultado_id}_{respondent_id}_{idx_step}"
+                                    if step_refine_key not in st.session_state:
+                                        st.session_state[step_refine_key] = limpiar_respuesta_llm(participacion_texto)
+                                    
+                                    col_step1, col_step2 = st.columns([5, 1])
+                                    with col_step2:
+                                        if st.button("✨ Refinar", key=f"btn_refine_{step_refine_key}"):
+                                            system_config = cargar_config("system")
+                                            with st.spinner("Limpiando..."):
+                                                refined = refinar_texto(participacion_texto, system_config)
+                                                if refined:
+                                                    st.session_state[step_refine_key] = refined
+                                                    st.success("Refinado!")
+                                                    st.rerun()
+                                                else:
+                                                    st.error("Error")
+                                    
+                                    with col_step1:
+                                        st.markdown(st.session_state[step_refine_key] or "_(Sin contenido)_")
+                    else:
+                        st.error("No se pudieron cargar los detalles de este respondiente.")
 
         # Exportar PDF
         st.markdown("---")
@@ -221,12 +403,20 @@ def render_resultados():
         with col_a:
             if st.button("Generar PDF", key="results_generate_pdf"):
                 try:
-                    pdf_bytes = _build_result_pdf_bytes(resultados)
+                    # Recopilar todos los textos refinados de la sesión
+                    refinado_main = st.session_state.get(f"refinado_main_{resultados.get('resultado_id', 'none')}")
+                    
+                    # Recopilar refinados de steps (todos los que empiecen por 'refinado_')
+                    refined_steps = {k: v for k, v in st.session_state.items() if k.startswith("refinado_") and k != f"refinado_main_{resultados.get('resultado_id', 'none')}"}
+                    
+                    pdf_bytes = _build_result_pdf_bytes(resultados, refined_main=refinado_main, refined_steps=refined_steps)
                     st.session_state["pdf_resultados_bytes"] = pdf_bytes
                     st.session_state["pdf_resultados_ts"] = resultados.get("timestamp") or ""
                     st.success("✅ PDF generado. Ya puedes descargarlo.")
                 except Exception as e:
                     st.warning(f"No se pudo generar el PDF: {e}")
+                    import traceback
+                    st.error(traceback.format_exc())
 
             pdf_bytes = st.session_state.get("pdf_resultados_bytes")
             if pdf_bytes:

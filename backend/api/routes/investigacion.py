@@ -151,7 +151,7 @@ def _build_llm_client(system_config_dict: Dict[str, Any]) -> LLMClient:
     llm_config = {
         "provider": normalized_provider,
         "temperature": system_config_dict.get("temperatura", 0.7),
-        "max_tokens": system_config_dict.get("max_tokens", 1000),
+        "max_tokens": system_config_dict.get("max_tokens", 8000),
     }
     if normalized_provider == "anythingllm":
         workspace_slug = system_config_dict.get("anythingllm_workspace_slug")

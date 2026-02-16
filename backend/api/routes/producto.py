@@ -195,7 +195,7 @@ async def generar_ficha_producto(request: GenerarFichaProductoRequest):
         llm_config: Dict[str, Any] = {
             "provider": provider,
             "temperature": sys_cfg.get("temperatura", 0.7),
-            "max_tokens": sys_cfg.get("max_tokens", 1000),
+            "max_tokens": sys_cfg.get("max_tokens", 8000),
         }
         if provider == "anythingllm":
             mode = str(sys_cfg.get("anythingllm_mode") or "chat").strip().lower()

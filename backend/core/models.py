@@ -13,6 +13,11 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+from config import OPCIONES_ADOPCION, OPCIONES_PROFESION
+
 
 # -----------------------
 # UsuarioConfig (V2)
@@ -176,9 +181,15 @@ class UsuarioConfigV2(BaseModel):
                 
                 # Nuevos campos: Adopción tecnológica y Profesión
                 if d.adopcion_tecnologica:
-                    r.adopcion_tecnologica = d.adopcion_tecnologica
+                    if d.adopcion_tecnologica == "(Aleatorio)":
+                        r.adopcion_tecnologica = random.choice(OPCIONES_ADOPCION)
+                    else:
+                        r.adopcion_tecnologica = d.adopcion_tecnologica
                 if d.profesion:
-                    r.profesion = d.profesion
+                    if d.profesion == "(Aleatorio)":
+                        r.profesion = random.choice(OPCIONES_PROFESION)
+                    else:
+                        r.profesion = d.profesion
 
         return respondents
 

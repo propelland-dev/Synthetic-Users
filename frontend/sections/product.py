@@ -1,5 +1,6 @@
 import streamlit as st
 import sys
+import re
 from pathlib import Path
 
 # Agregar el directorio padre al path para importar config
@@ -240,6 +241,17 @@ def render_producto():
         clicked = st.button("Generar/Actualizar ficha", key="producto_generar_ficha")
     with col_info:
         st.caption("La ficha se usará como contexto del producto en la investigación.")
+    
+    # Función auxiliar para limpiar razonamiento
+    def clean_llm_response(text: str) -> str:
+        if not text:
+            return ""
+        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
+        if '</think>' in text:
+            text = text.split('</think>')[-1]
+        if '<think>' in text.lower():
+            text = text.split('<think>')[0]
+        return text.strip()
 
     if clicked:
         system_cfg = st.session_state.get("system_config")
@@ -247,6 +259,7 @@ def render_producto():
             system_cfg = cargar_config("system") if existe_config("system") else {}
         if not isinstance(system_cfg, dict):
             system_cfg = {}
+            
         if not system_cfg.get("prompt_ficha_producto"):
             st.error("Falta `prompt_ficha_producto`. Ve a Configuración y guarda la configuración del sistema.")
         else:
@@ -274,6 +287,8 @@ def render_producto():
             if ficha is None:
                 st.error("No se pudo generar la ficha (revisa conexión con el LLM).")
             else:
+                # Limpiar razonamiento por si el backend no lo hizo (aunque ya debería)
+                ficha = clean_llm_response(ficha)
                 st.session_state["producto_ficha"] = ficha
                 # Persistir ficha en archivo separado inmediatamente
                 guardar_config(
@@ -284,10 +299,14 @@ def render_producto():
                         "fields_hash": current_hash,
                     },
                 )
+                st.rerun()
 
     # Mantener config en sesión siempre actualizada (se persistirá al cambiar de página)
     # Por defecto, si no hay ficha, usamos la descripción input como `descripcion` canónica.
-    descripcion_canonica = (st.session_state.get("producto_ficha") or "").strip() or (st.session_state.get("producto_descripcion_input") or "")
+    ficha_raw = st.session_state.get("producto_ficha") or ""
+    ficha_limpia = clean_llm_response(ficha_raw)
+    
+    descripcion_canonica = ficha_limpia or (st.session_state.get("producto_descripcion_input") or "")
     st.session_state["producto_config"] = {
         "producto_tipo": producto_tipo,
         "nombre_producto": (st.session_state.get("producto_nombre") or "").strip() or None,

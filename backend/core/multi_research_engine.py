@@ -72,6 +72,47 @@ class MultiResearchEngine:
         config = dict(getattr(proto, "config", {}) or {})
         return LLMClient(provider=provider, config=config)
 
+    def _clean_output(self, text: str) -> str:
+        """
+        Limpia la salida del LLM de etiquetas técnicas.
+        NO recorta el texto por anclajes para evitar cortes accidentales.
+        """
+        import re
+        if not text:
+            return ""
+        
+        # 1. Eliminar bloques <think>...</think> (insensible a mayúsculas/minúsculas)
+        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
+        
+        # 2. Eliminar tags huérfanos
+        text = re.sub(r'</?think>', '', text, flags=re.IGNORECASE)
+        
+        # 3. Eliminar envoltorios de bloques de código Markdown globales
+        text = text.strip()
+        if text.startswith('```'):
+            lines = text.splitlines()
+            if len(lines) >= 2 and lines[-1].strip() == '```':
+                text = "\n".join(lines[1:-1])
+            
+        return text.strip()
+
+    def _refine_with_llm(self, text: str) -> str:
+        """
+        Extraído a un método separado para ser llamado manualmente si se desea.
+        Por ahora, el motor NO lo llamará automáticamente para evitar cortes.
+        """
+        if not text or len(text) < 30:
+            return text
+            
+        try:
+            client = self._fresh_llm_client()
+            prompt = DEFAULT_PROMPTS.get("refinado", "{texto}").format(texto=text)
+            refined = client.generate(prompt, temperature=0.0)
+            return refined.strip()
+        except Exception as e:
+            print(f"Error en refinado LLM: {e}")
+            return text
+
     def _resultados_dir(self) -> Path:
         d = STORAGE_DIR / "resultados" / self._run_ts
         d.mkdir(parents=True, exist_ok=True)
@@ -154,6 +195,11 @@ class MultiResearchEngine:
             llm_client_r = self._fresh_llm_client()
             usuario = SyntheticUser(perfil_basico)
             perfil_det = usuario.generate_profile(llm_client_r, self.prompt_perfil)
+            
+            # Limpiar solo tags técnicos del perfil generado
+            if perfil_det and "perfil_generado" in perfil_det:
+                perfil_det["perfil_generado"] = self._clean_output(perfil_det["perfil_generado"])
+                
             perfil_text = (perfil_det or {}).get("perfil_generado", "")
             nombre = (perfil_det or {}).get("nombre") or usuario.nombre or f"Respondent_{idx+1}"
 
@@ -172,7 +218,7 @@ class MultiResearchEngine:
                     out = ""
                     if questions:
                         prompt = self._cuestionario_prompt(nombre, perfil_text, questions)
-                        out = llm_client_r.generate(prompt)
+                        out = self._clean_output(llm_client_r.generate(prompt))
                     artifact_steps.append({"type": "cuestionario", "questions": questions, "respuestas": out})
 
                 elif stype == "entrevista":
@@ -182,7 +228,7 @@ class MultiResearchEngine:
                     except Exception:
                         n_i = 6
                     prompt = self._entrevista_prompt(nombre, perfil_text, n_questions=n_i, seed=idx + 1)
-                    out = llm_client_r.generate(prompt)
+                    out = self._clean_output(llm_client_r.generate(prompt))
                     artifact_steps.append({"type": "entrevista", "n_questions": n_i, "transcripcion": out})
 
             respondent_filename = f"respondent_{idx+1:02d}.json"
@@ -244,7 +290,7 @@ class MultiResearchEngine:
         )
 
         llm_client_s = self._fresh_llm_client()
-        resultado_texto = llm_client_s.generate(synthesis_prompt)
+        resultado_texto = self._clean_output(llm_client_s.generate(synthesis_prompt))
 
         # 4) Resultado final (analisis.json)
         final_filename = "analisis.json"
@@ -324,6 +370,11 @@ class MultiResearchEngine:
             llm_client_r = self._fresh_llm_client()
             usuario = SyntheticUser(perfil_basico if isinstance(perfil_basico, dict) else {})
             perfil_det = usuario.generate_profile(llm_client_r, self.prompt_perfil)
+            
+            # Limpiar solo tags técnicos del perfil generado
+            if perfil_det and "perfil_generado" in perfil_det:
+                perfil_det["perfil_generado"] = self._clean_output(perfil_det["perfil_generado"])
+                
             perfil_text = (perfil_det or {}).get("perfil_generado", "")
             nombre = (perfil_det or {}).get("nombre") or usuario.nombre or f"Respondent_{idx+1}"
             
@@ -355,7 +406,7 @@ class MultiResearchEngine:
                     out = ""
                     if questions:
                         prompt = self._cuestionario_prompt(nombre, perfil_text, questions)
-                        out = llm_client_r.generate(prompt)
+                        out = self._clean_output(llm_client_r.generate(prompt))
                     artifact_steps.append({"type": "cuestionario", "questions": questions, "respuestas": out})
 
                 elif stype == "entrevista":
@@ -365,7 +416,7 @@ class MultiResearchEngine:
                     except Exception:
                         n_i = 6
                     prompt = self._entrevista_prompt(nombre, perfil_text, n_questions=n_i, seed=idx + 1)
-                    out = llm_client_r.generate(prompt)
+                    out = self._clean_output(llm_client_r.generate(prompt))
                     artifact_steps.append({"type": "entrevista", "n_questions": n_i, "transcripcion": out})
 
                 yield {
@@ -447,7 +498,7 @@ class MultiResearchEngine:
         )
 
         llm_client_s = self._fresh_llm_client()
-        resultado_texto = llm_client_s.generate(synthesis_prompt)
+        resultado_texto = self._clean_output(llm_client_s.generate(synthesis_prompt))
         yield {"event": "synthesis_done", "message": "Síntesis completada."}
 
         final_filename = "analisis.json"

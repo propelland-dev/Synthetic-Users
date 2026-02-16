@@ -3,6 +3,7 @@ Cliente LLM para interactuar con diferentes proveedores de modelos de lenguaje
 """
 import requests
 import json
+import re
 from typing import Optional, Dict, Any
 import time
 import random
@@ -124,15 +125,76 @@ class LLMClient:
         """
         # Throttling global por instancia (aplica a cualquier proveedor).
         self._maybe_throttle()
+        
+        response_text = ""
         if self.provider == "llama":
             provider = getattr(self, "llama_provider", "ollama")
             if provider == "anythingllm":
-                return self._generate_anythingllm(prompt, **kwargs)
-            if provider == "huggingface":
-                return self._generate_huggingface(prompt, temperature, max_tokens, **kwargs)
-            return self._generate_llama(prompt, temperature, max_tokens, **kwargs)
+                response_text = self._generate_anythingllm(prompt, **kwargs)
+            elif provider == "huggingface":
+                response_text = self._generate_huggingface(prompt, temperature, max_tokens, **kwargs)
+            else:
+                response_text = self._generate_llama(prompt, temperature, max_tokens, **kwargs)
         elif self.provider == "chatgpt":
-            return self._generate_chatgpt(prompt, temperature, max_tokens, **kwargs)
+            response_text = self._generate_chatgpt(prompt, temperature, max_tokens, **kwargs)
+        
+        # LOG DE DEPURACIÓN: Guardar la respuesta cruda para analizar por qué falla el filtrado
+        try:
+            from config import STORAGE_DIR
+            log_dir = STORAGE_DIR / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_file = log_dir / "raw_llm_responses.log"
+            with open(log_file, "a", encoding="utf-8") as f:
+                import datetime
+                timestamp = datetime.datetime.now().isoformat()
+                f.write(f"\n{'='*50}\n")
+                f.write(f"TIMESTAMP: {timestamp}\n")
+                f.write(f"PROVIDER: {self.provider}\n")
+                f.write(f"PROMPT (primeros 100 caracteres): {prompt[:100]}...\n")
+                f.write(f"RAW RESPONSE:\n{response_text}\n")
+                f.write(f"{'='*50}\n")
+        except Exception as e:
+            print(f"Error al escribir log de LLM: {e}")
+
+        # Limpiar razonamiento (tags <think>...</think>) si existen
+        return self._clean_reasoning(response_text)
+
+    def _clean_reasoning(self, text: str) -> str:
+        """
+        Elimina bloques de razonamiento (típicos de modelos como DeepSeek)
+        preservando el formato y las mayúsculas del texto original.
+        """
+        if not text:
+            return ""
+        
+        import re
+        
+        # 1. Eliminar bloques completos <think>...</think>
+        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
+        
+        # 2. Manejar tags de cierre </think> huérfanos (si el razonamiento se cortó al inicio)
+        if '</think>' in text:
+            text = text.split('</think>')[-1]
+            
+        # 3. Manejar tags de apertura <think> huérfanos (si el razonamiento se cortó al final)
+        if '<think>' in text.lower():
+            # Buscar la posición de <think> de forma insensible a mayúsculas
+            match = re.search(r'<think>', text, flags=re.IGNORECASE)
+            if match:
+                text = text[:match.start()]
+            
+        # 4. Eliminar envoltorios de bloques de código Markdown globales
+        # Algunos modelos envuelven TODA la respuesta en ```markdown ... ```
+        text = text.strip()
+        if text.startswith('```'):
+            # Si el texto empieza y termina con triple comilla, y no hay más bloques de código
+            # intentamos extraer el contenido.
+            lines = text.splitlines()
+            if len(lines) >= 2 and lines[0].startswith('```') and lines[-1].strip() == '```':
+                # Solo si el cierre es el ÚLTIMO carácter significativo
+                text = "\n".join(lines[1:-1])
+
+        return text.strip()
     
     def _generate_llama(self, prompt: str, temperature: Optional[float] = None,
                        max_tokens: Optional[int] = None, **kwargs) -> str:
