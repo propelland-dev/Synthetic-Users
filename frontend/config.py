@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 # Configuración Hugging Face (Solo para UI)
 HUGGINGFACE_UI_CONFIG = {
     "models_list": [
+        "Qwen/Qwen3-4B-Instruct-2507:nscale",
         "ServiceNow-AI/Apriel-1.6-15b-Thinker:together",
         "Qwen/Qwen3-4B-Thinking-2507:nscale"
     ]
