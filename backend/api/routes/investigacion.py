@@ -205,7 +205,7 @@ def _run_job(run_id: str, system_config_dict: Dict[str, Any]) -> None:
 
         llm_client = _build_llm_client(system_config_dict)
         _job_append_event(job, {"event": "planning", "message": "Preparando plan..."})
-        plan = build_plan(investigacion_descripcion, estilo_investigacion)
+        plan = build_plan(investigacion_descripcion, estilo_investigacion, investigacion_preguntas)
         respondents = [r.model_dump() for r in usuario_cfg_v2.to_effective_respondents()]
         _job_append_event(job, {"event": "planning_done", "message": f"Plan listo. Respondientes: {len(respondents)}."})
 
@@ -381,7 +381,7 @@ def iniciar_investigacion(request: IniciarInvestigacionRequest):
         if missing_prompts:
             raise HTTPException(status_code=400, detail=f"Faltan prompts: {', '.join(missing_prompts)}")
 
-        plan = build_plan(investigacion_descripcion, estilo_investigacion)
+        plan = build_plan(investigacion_descripcion, estilo_investigacion, investigacion_preguntas)
         respondents = [r.model_dump() for r in usuario_cfg_v2.to_effective_respondents()]
 
         engine = MultiResearchEngine(
@@ -428,7 +428,7 @@ def iniciar_investigacion_stream(request: IniciarInvestigacionRequest):
                 return
 
             yield _sse({"event": "planning", "message": "Preparando plan..."})
-            plan = build_plan(investigacion_descripcion, estilo_investigacion)
+            plan = build_plan(investigacion_descripcion, estilo_investigacion, investigacion_preguntas)
             respondents = [r.model_dump() for r in usuario_cfg_v2.to_effective_respondents()]
             yield _sse({"event": "planning_done", "message": f"Plan listo. Respondientes: {len(respondents)}."})
 
@@ -442,6 +442,8 @@ def iniciar_investigacion_stream(request: IniciarInvestigacionRequest):
                 llm_client=llm_client,
                 plan=plan,
                 prompt_perfil=system_config_dict.get("prompt_perfil"),
+                prompt_cuestionario=system_config_dict.get("prompt_cuestionario"),
+                prompt_entrevista=system_config_dict.get("prompt_entrevista"),
                 prompt_sintesis=system_config_dict.get("prompt_sintesis"),
             )
 

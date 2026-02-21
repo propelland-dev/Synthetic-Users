@@ -277,7 +277,10 @@ CONTEXTO DEL PRODUCTO:
 SITUACIÓN DE LA INVESTIGACIÓN:
 {investigacion_descripcion}
 
-Vas a participar en una entrevista CONVERSACIONAL sobre tu experiencia. El entrevistador te hará {n_questions} preguntas relacionadas con la investigación.
+OBJETIVOS Y PREGUNTAS CLAVE:
+{investigacion_preguntas}
+
+Vas a participar en una entrevista CONVERSACIONAL sobre tu experiencia. El entrevistador te hará {n_questions} preguntas relacionadas con la investigación de arriba.
 
 Como es una conversación oral, tus respuestas deben ser:
 - Naturales y espontáneas (como cuando hablas en persona)

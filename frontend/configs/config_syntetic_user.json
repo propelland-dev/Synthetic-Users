@@ -1,7 +1,7 @@
 {
   "mode": "population",
   "population": {
-    "n": 2,
+    "n": 4,
     "mix": [
       {
         "arquetipo": "Preocupado",
@@ -16,6 +16,20 @@
         "comportamiento": "- Prueba distintos enfoques\n- Hace preguntas abiertas\n- Juega con la herramienta\n- Aporta ideas y mejoras",
         "necesidades": "- Conversación fluida\n- Libertad para experimentar\n- Capacidad de iterar\n- Feedback rápido",
         "barreras": "- Respuestas rígidas\n- Demasiadas restricciones\n- Falta de evolución del producto"
+      },
+      {
+        "arquetipo": "Ejecutor",
+        "count": 1,
+        "comportamiento": "- Quiere respuestas rápidas\n- Uso pragmático y directo\n- Poco interés en el \"cómo\"\n- Busca aplicabilidad inmediata",
+        "necesidades": "- Respuestas claras y accionables\n- Pasos concretos\n- Síntesis\n- Rapidez",
+        "barreras": "- Respuestas ambiguas\n- Exceso de explicación\n- Lenguaje poco operativo"
+      },
+      {
+        "arquetipo": "Dependiente",
+        "count": 1,
+        "comportamiento": "- Uso muy intensivo\n- Delegación excesiva\n- Riesgo de perder criterio propio\n- Confianza ciega en la IA",
+        "necesidades": "- Fricción positiva\n- Recordatorios de validación\n- Límites claros de uso\n- Educación en pensamiento crítico",
+        "barreras": "- Sobreconfianza\n- Uso sin validar\n- Riesgo operativo o reputacional"
       }
     ],
     "demografia": {

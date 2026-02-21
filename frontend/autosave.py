@@ -216,6 +216,8 @@ def build_system_config_from_state() -> Dict[str, Any]:
     max_tokens = st.session_state.get("system_max_tokens")
     modelo_path = st.session_state.get("system_modelo_path")
     prompt_perfil = st.session_state.get("system_prompt_perfil")
+    prompt_cuestionario = st.session_state.get("system_prompt_cuestionario")
+    prompt_entrevista = st.session_state.get("system_prompt_entrevista")
     prompt_sintesis = st.session_state.get("system_prompt_sintesis")
     prompt_ficha_producto = st.session_state.get("system_prompt_ficha_producto")
 
@@ -236,6 +238,10 @@ def build_system_config_from_state() -> Dict[str, Any]:
         cfg["modelo_path"] = modelo_path
     if isinstance(prompt_perfil, str):
         cfg["prompt_perfil"] = prompt_perfil
+    if isinstance(prompt_cuestionario, str):
+        cfg["prompt_cuestionario"] = prompt_cuestionario
+    if isinstance(prompt_entrevista, str):
+        cfg["prompt_entrevista"] = prompt_entrevista
     if isinstance(prompt_sintesis, str):
         cfg["prompt_sintesis"] = prompt_sintesis
     if isinstance(prompt_ficha_producto, str):
