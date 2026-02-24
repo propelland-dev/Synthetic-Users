@@ -5,7 +5,7 @@ services:
       dockerfile: backend/Dockerfile
     container_name: moeve-backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend/storage:/app/backend/storage
     # Inyectamos las variables de entorno desde el .env del backend si existe
