@@ -135,6 +135,12 @@ class MultiResearchEngine:
         preguntas_texto = "\n".join([f"Q{i+1}: {p}" for i, p in enumerate(preguntas) if isinstance(p, str) and p.strip()])
         
         prompt_template = self.prompt_cuestionario or DEFAULT_PROMPTS["cuestionario"]
+        
+        # Migración automática: si el prompt guardado no tiene la variable {preguntas}, 
+        # forzamos el uso del prompt por defecto para asegurar que el cuestionario funcione.
+        if "{preguntas}" not in prompt_template:
+            prompt_template = DEFAULT_PROMPTS["cuestionario"]
+
         return prompt_template.format(
             nombre_usuario=nombre_usuario,
             perfil_usuario=perfil_usuario,
@@ -157,6 +163,12 @@ class MultiResearchEngine:
         seed_txt = f"{int(seed)}" if isinstance(seed, int) else "N/A"
         
         prompt_template = self.prompt_entrevista or DEFAULT_PROMPTS["entrevista"]
+        
+        # Migración automática: si el prompt guardado no tiene la variable {investigacion_preguntas},
+        # usamos el por defecto que ya incluye el contexto de las preguntas deseadas.
+        if "{investigacion_preguntas}" not in prompt_template:
+            prompt_template = DEFAULT_PROMPTS["entrevista"]
+
         return prompt_template.format(
             nombre_usuario=nombre_usuario,
             perfil_usuario=perfil_usuario,
